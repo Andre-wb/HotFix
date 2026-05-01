@@ -27,10 +27,11 @@ async fn run_migrations(pool: &SqlitePool) {
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS users (
             id            INTEGER  PRIMARY KEY AUTOINCREMENT,
-            username_hash TEXT     NOT NULL UNIQUE,  -- HMAC-SHA256 for lookups/uniqueness
-            username_enc  TEXT     NOT NULL,          -- AES-GCM encrypted for display
-            password_hash TEXT     NOT NULL,          -- Argon2id
-            totp_secret   TEXT,                       -- NULL until 2FA is enabled
+            username_hash TEXT     NOT NULL UNIQUE,
+            username_enc  TEXT     NOT NULL,
+            password_hash TEXT     NOT NULL,
+            rank          TEXT     NOT NULL,
+            totp_secret   TEXT,
             totp_enabled  BOOLEAN  NOT NULL DEFAULT 0,
             total_points  INTEGER  NOT NULL DEFAULT 0,
             tasks_solved  INTEGER  NOT NULL DEFAULT 0,
@@ -58,18 +59,17 @@ async fn run_migrations(pool: &SqlitePool) {
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS tasks (
             id            INTEGER  PRIMARY KEY AUTOINCREMENT,
-            language      TEXT     NOT NULL,  -- 'rust' | 'python' | 'javascript' | 'go'
-            difficulty    TEXT     NOT NULL,  -- 'easy' | 'medium' | 'hard'
-            title         TEXT     NOT NULL,
-            description   TEXT     NOT NULL,  -- what concept this tests
-            broken_code   TEXT     NOT NULL,  -- shown to the player
-            correct_code  TEXT     NOT NULL,  -- used for tier-1 comparison
-            bug_type      TEXT     NOT NULL,  -- 'type_error' | 'logic' | 'syntax' | 'runtime'
-            hint          TEXT,               -- optional, costs points to reveal
-            time_limit    INTEGER  NOT NULL,  -- seconds
-            points        INTEGER  NOT NULL,
-            ai_generated  BOOLEAN  NOT NULL DEFAULT 0,
-            active        BOOLEAN  NOT NULL DEFAULT 1,  -- soft delete / disable tasks
+            language      TEXT     NOT NULL,
+            difficulty    TEXT     NOT NULL,
+            type          TEXT     NOT NULL,
+            title         TEXT     NOT NULL UNIQUE,
+            description   TEXT     NOT NULL,
+            broken_code   TEXT     NOT NULL,
+            correct_code  TEXT     NOT NULL,
+            tags          JSON     NOT NULL,
+            hint          TEXT     NOT NULL,
+            time_limit    INTEGER  NOT NULL,
+            active        BOOLEAN  NOT NULL DEFAULT 1,
             created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
         )"
     )
@@ -83,8 +83,8 @@ async fn run_migrations(pool: &SqlitePool) {
         "CREATE TABLE IF NOT EXISTS task_tests (
             id        INTEGER PRIMARY KEY AUTOINCREMENT,
             task_id   INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-            input     TEXT    NOT NULL,   -- JSON array of arguments
-            expected  TEXT    NOT NULL    -- expected output as JSON
+            input     TEXT    NOT NULL,
+            expected  TEXT    NOT NULL
         )"
     )
         .execute(&mut *tx)
@@ -98,13 +98,12 @@ async fn run_migrations(pool: &SqlitePool) {
             id           INTEGER  PRIMARY KEY AUTOINCREMENT,
             user_id      INTEGER  NOT NULL REFERENCES users(id) ON DELETE CASCADE,
             task_id      INTEGER  NOT NULL REFERENCES tasks(id),
-            submitted    TEXT     NOT NULL,   -- exact code the user submitted
+            submitted    TEXT     NOT NULL,
             is_correct   BOOLEAN  NOT NULL,
-            tier_used    TEXT     NOT NULL,   -- 'exact' | 'tests' | 'ai'
-            time_taken   INTEGER  NOT NULL,   -- seconds
+            tier_used    TEXT     NOT NULL,
+            time_taken   INTEGER  NOT NULL,
             hint_used    BOOLEAN  NOT NULL DEFAULT 0,
             points       INTEGER  NOT NULL DEFAULT 0,
-            ai_feedback  TEXT,                -- stored async after submission
             created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
         )"
     )
@@ -118,10 +117,10 @@ async fn run_migrations(pool: &SqlitePool) {
         "CREATE VIEW IF NOT EXISTS leaderboard AS
             SELECT
                 id,
-                username_enc,   -- caller must decrypt this
+                username_enc,
                 total_points,
                 tasks_solved,
-                RANK() OVER (ORDER BY total_points DESC) as rank
+                rank,
             FROM users
             ORDER BY total_points DESC
             LIMIT 100"

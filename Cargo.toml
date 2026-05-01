@@ -10,3 +10,7 @@ sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio"] }
 askama = "0.12"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+aes-gcm = "0.10.3"
+base64 = "0.22.1"
+serde = "1.0.228"
+argon2 = "0.5.3"
