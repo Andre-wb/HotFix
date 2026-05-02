@@ -16,14 +16,10 @@ use argon2::{
     },
     Argon2,
 };
-use aes_gcm::{aead::{Aead, AeadCore, KeyInit, OsRng as AesRng}, Aes256Gcm, Key, Nonce};
-use base64::{engine::general_purpose::STANDARD as BASE64, Engine, };
-use serde::{Serialize, Deserialize};
-
+use serde::Deserialize;
 
 mod db;
 mod config;
-
 
 #[derive(Template)]
 #[template(path = "register.html")]
@@ -53,13 +49,6 @@ struct RegisterForm {
     confirm_password: String,
 }
 
-#[derive(Debug)]
-struct RegisterFormError {
-    field: String,
-    message: String,
-}
-
-
 fn hash_password(password: &str) -> Result<String, String> {
     let salt = SaltString::generate(&mut OsRng);
     let argon2 = Argon2::default();
@@ -88,12 +77,69 @@ async fn get_login(flash_message: Option<String>) -> Html<String> {
     Html(LoginTemplate { flash_message }.render().unwrap())
 }
 
-async fn get_profile(flash_message: Option<String>) -> Html<String> {
+async fn get_profile(_flash_message: Option<String>) -> Html<String> {
     Html(ProfileTemplate.render().unwrap())
 }
 
-async fn get_problems(flash_message: Option<String>) -> Html<String> {
+async fn get_problems(_flash_message: Option<String>) -> Html<String> {
     Html(ProblemsTemplate.render().unwrap())
+}
+
+async fn post_register(
+    State(pool): State<db::DbPool>,
+    Form(form): Form<RegisterForm>,
+) -> Result<Redirect, Html<String>> {
+    // Step 1: Validate form data
+    if let Err(error_message) = validate_registration(&form) {
+        let error_html = RegisterTemplate {
+            flash_message: Some(error_message)
+        }.render().unwrap();
+        return Err(Html(error_html));
+    }
+
+    // Step 2: Check if user already exists
+    match db::user_exists(&pool, &form.username, &form.email).await {
+        Ok(true) => {
+            let error_html = RegisterTemplate {
+                flash_message: Some("Username or email already exists".to_string())
+            }.render().unwrap();
+            return Err(Html(error_html));
+        }
+        Err(e) => {
+            eprintln!("Database error checking user: {}", e);
+            let error_html = RegisterTemplate {
+                flash_message: Some("An error occurred. Please try again.".to_string())
+            }.render().unwrap();
+            return Err(Html(error_html));
+        }
+        _ => {}
+    }
+
+    // Step 3: Hash the password
+    let password_hash = match hash_password(&form.password) {
+        Ok(hash) => hash,
+        Err(e) => {
+            let error_html = RegisterTemplate {
+                flash_message: Some(format!("Error creating account: {}", e))
+            }.render().unwrap();
+            return Err(Html(error_html));
+        }
+    };
+
+    // Step 4: Save user to database
+    match db::create_user(&pool, &form.username, &form.email, &password_hash).await {
+        Ok(_) => {
+            // Success - redirect to login page
+            Ok(Redirect::to("/login"))
+        }
+        Err(e) => {
+            eprintln!("Failed to create user: {}", e);
+            let error_html = RegisterTemplate {
+                flash_message: Some("Failed to create account. Please try again.".to_string())
+            }.render().unwrap();
+            Err(Html(error_html))
+        }
+    }
 }
 
 fn validate_registration(form: &RegisterForm) -> Result<(), String> {
@@ -131,7 +177,6 @@ fn validate_registration(form: &RegisterForm) -> Result<(), String> {
     Ok(())
 }
 
-
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
@@ -145,9 +190,11 @@ async fn main() {
 
     let app = Router::new()
         .route("/register", get(get_register))
+        .route("/register", post(post_register))
         .route("/login", get(get_login))
         .route("/profile", get(get_profile))
-        .route("/problems", get(get_problems));
+        .route("/problems", get(get_problems))
+        .with_state(pool);
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:8000").await.unwrap();
     tracing::info!("listening on {}", listener.local_addr().unwrap());
