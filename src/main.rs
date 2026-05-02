@@ -1,7 +1,10 @@
-mod db;
-
-use std::fmt::format;
-use axum::{Router, routing::get, response::Html};
+use axum::{
+    Router,
+    routing::{get, post},
+    response::{Html, Redirect},
+    extract::State,
+    Form,
+};
 use askama::Template;
 use argon2::{
     password_hash::{
@@ -13,14 +16,14 @@ use argon2::{
     },
     Argon2,
 };
-use aes_gcm::{
-    aead::{Aead, AeadCore, KeyInit, OsRng as AesRng},
-    Aes256Gcm, Key, Nonce
-};
-use base64::{
-    engine::general_purpose::STANDARD as BASE64, Engine,
-};
+use aes_gcm::{aead::{Aead, AeadCore, KeyInit, OsRng as AesRng}, Aes256Gcm, Key, Nonce};
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine, };
 use serde::{Serialize, Deserialize};
+
+
+mod db;
+mod config;
+
 
 #[derive(Template)]
 #[template(path = "register.html")]
@@ -42,6 +45,21 @@ struct ProfileTemplate;
 #[template(path = "problems.html")]
 struct ProblemsTemplate;
 
+#[derive(Deserialize, Debug)]
+struct RegisterForm {
+    username: String,
+    email: String,
+    password: String,
+    confirm_password: String,
+}
+
+#[derive(Debug)]
+struct RegisterFormError {
+    field: String,
+    message: String,
+}
+
+
 fn hash_password(password: &str) -> Result<String, String> {
     let salt = SaltString::generate(&mut OsRng);
     let argon2 = Argon2::default();
@@ -49,7 +67,7 @@ fn hash_password(password: &str) -> Result<String, String> {
         .hash_password(password.as_bytes(), &salt)
         .map_err(|error| format!("Hashing failed: {error}"))?
         .to_string();
-    
+
     Ok(password_hash)
 }
 
@@ -76,6 +94,41 @@ async fn get_profile(flash_message: Option<String>) -> Html<String> {
 
 async fn get_problems(flash_message: Option<String>) -> Html<String> {
     Html(ProblemsTemplate.render().unwrap())
+}
+
+fn validate_registration(form: &RegisterForm) -> Result<(), String> {
+    if form.username.len() < 3 {
+        return Err("Username must be at least 3 characters".to_string());
+    }
+    if form.username.len() > 30 {
+        return Err("Username must be less than 30 characters".to_string());
+    }
+    if !form.username.chars().all(|c| c.is_alphanumeric() || c == '_') {
+        return Err("Username can only contain letters, numbers, and underscores".to_string());
+    }
+
+    if !form.email.contains('@') || !form.email.contains('.') {
+        return Err("Please enter a valid email address".to_string());
+    }
+
+    if form.password.len() < 8 {
+        return Err("Password must be at least 8 characters".to_string());
+    }
+    if !form.password.chars().any(|c| c.is_uppercase()) {
+        return Err("Password must contain at least one uppercase letter".to_string());
+    }
+    if !form.password.chars().any(|c| c.is_lowercase()) {
+        return Err("Password must contain at least one lowercase letter".to_string());
+    }
+    if !form.password.chars().any(|c| c.is_numeric()) {
+        return Err("Password must contain at least one number".to_string());
+    }
+
+    if form.password != form.confirm_password {
+        return Err("Passwords do not match".to_string());
+    }
+
+    Ok(())
 }
 
 

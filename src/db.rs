@@ -1,9 +1,10 @@
 use sqlx::{SqlitePool, sqlite::{SqliteConnectOptions, SqlitePoolOptions}};
 use std::str::FromStr;
 use tracing::info;
+use crate::config;
 
 pub async fn init_pool() -> SqlitePool {
-    let options = SqliteConnectOptions::from_str("sqlite://app.db")
+    let options = SqliteConnectOptions::from_str(config::database_url())
         .expect("invalid db url")
         .create_if_missing(true);
 
