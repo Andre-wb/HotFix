@@ -71,7 +71,6 @@ fn get_env(key: &str) -> Result<String, String> {
 }
 
 /// Convert String to &'static str by leaking memory
-/// Note: This is safe for configuration values that are set once and live for the entire program lifetime
 fn leak_string(s: String) -> &'static str {
     Box::leak(Box::new(s))
 }
@@ -103,4 +102,20 @@ pub fn app_environment() -> &'static str {
 #[allow(unused)]
 pub fn log_level() -> &'static str {
     Config::global().log_level
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::config::{get_env, Config};
+
+    #[test]
+    fn test_validate() {
+        let config = Config::init().unwrap();
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_getting_environment_variable() {
+        assert!(get_env("NON_EXISTING_KEY").is_err());
+    }
 }
