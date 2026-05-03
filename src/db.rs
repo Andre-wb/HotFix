@@ -1,61 +1,22 @@
-use sqlx::{PgPool, FromRow};
-use uuid::Uuid;
-use chrono::{DateTime, Utc};
-use sqlx::migrate::Migrator;
-use crate::RegisterForm;
-use serde_json::Value;
-use serde::{Deserialize, Serialize};
+/// Database initialisation and utils
+
+use argon2::{
+    password_hash::{
+        rand_core::OsRng,
+        PasswordHash,
+        SaltString,
+        PasswordVerifier,
+        PasswordHasher,
+    },
+    Argon2,
+};
+use sqlx::{PgPool, migrate::Migrator};
+use crate::schemas::{RegisterForm, User};
+
 
 pub type DbPool = PgPool;
 pub static MIGRATOR: Migrator = sqlx::migrate!();
 
-#[derive(Debug, FromRow)]
-pub struct User {
-    pub id: Uuid,
-    pub username: String,
-    pub email: String,
-    pub password_hash: String,
-    pub created_at: DateTime<Utc>,
-    pub rank: String,
-    pub problems_solved: i32, // for tracking how many problems user solved
-    pub tags: Value, // for tracking topics of problems which user solved and how many problems user solved in 1 exact topic
-}
-
-#[derive(Debug, FromRow)]
-pub struct Problems {
-    pub id: Uuid,
-    pub name: String,
-    pub topics: Vec<String>,
-    pub language: String,
-    pub difficulty: Difficulty,
-    /// Problem have incorrect code, which user need to fix and description about what correct code should do
-    /// User's attempts checks with tests
-    /// User's code have to pass all the test just like correct version to mark as solved
-    pub correct_version: String,
-    pub incorrect_version: String,
-    pub tests: Value, // to test which output we get from program with particular input
-    pub time_limit_seconds: i32, // how much time users have to solve the problem
-    pub description: String,
-    pub solved_count: i32,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, sqlx::Type, Serialize, Deserialize)]
-#[sqlx(type_name = "difficulty_enum", rename_all = "lowercase")]
-pub enum Difficulty {
-    Easy,
-    Medium,
-    Hard,
-}
-
-impl std::fmt::Display for Difficulty {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Difficulty::Easy => write!(f, "easy"),
-            Difficulty::Medium => write!(f, "medium"),
-            Difficulty::Hard => write!(f, "hard"),
-        }
-    }
-}
 
 
 /// Initialize database connection pool
@@ -76,7 +37,6 @@ pub async fn init_pool() -> DbPool {
     pool
 }
 
-/// Check if username or email already exists
 pub async fn user_exists(
     pool: &DbPool,
     username: &str,
@@ -167,4 +127,24 @@ pub fn validate_registration(form: &RegisterForm) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+pub fn hash_password(password: &str) -> Result<String, String> {
+    let salt = SaltString::generate(&mut OsRng);
+    let argon2 = Argon2::default();
+    let password_hash = argon2
+        .hash_password(password.as_bytes(), &salt)
+        .map_err(|error| format!("Hashing failed: {error}"))?
+        .to_string();
+
+    Ok(password_hash)
+}
+
+pub fn verify_password(password: &str, hash: &str) -> Result<bool, String> {
+    let parsed_hash = PasswordHash::new(hash)
+        .map_err(|error| format!("Invalid hash: {error}"))?;
+    Ok(Argon2::default()
+        .verify_password(password.as_bytes(), &parsed_hash)
+        .is_ok()
+    )
 }

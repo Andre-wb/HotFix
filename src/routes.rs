@@ -6,7 +6,8 @@ use axum::{
     Form,
 };
 use askama::Template;
-use crate::{db, hash_password, verify_password, LoginForm, LoginTemplate, ProblemsTemplate, ProfileTemplate, RegisterForm, RegisterTemplate};
+use crate::db::{self, verify_password, hash_password};
+use crate::schemas::{LoginTemplate, ProblemsTemplate, ProfileTemplate, RegisterForm, RegisterTemplate, LoginForm};
 
 
 pub async fn get_register(flash_message: Option<String>) -> Html<String> {

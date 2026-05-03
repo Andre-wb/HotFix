@@ -1,23 +1,13 @@
 use dotenvy::dotenv;
 use std::env;
 use std::sync::OnceLock;
+pub use crate::schemas::Config;
 
 static CONFIG: OnceLock<Config> = OnceLock::new();
-
-#[derive(Debug, Clone)]
-pub struct Config {
-    pub encryption_key: &'static str,
-    pub username_secret: &'static str,
-    pub session_secret: &'static str,
-    pub database_url: &'static str,
-    pub app_environment: &'static str,
-    pub log_level: &'static str,
-}
 
 impl Config {
     /// Initialize configuration from environment variables
     pub fn init() -> Result<&'static Config, String> {
-        // Load .env file
         dotenv().ok();
 
         let config = Config {
@@ -64,12 +54,12 @@ impl Config {
         Ok(())
     }
 
-    /// Check if running in development mode
+    #[allow(unused)]
     pub fn is_development(&self) -> bool {
         self.app_environment.eq_ignore_ascii_case("development")
     }
 
-    /// Check if running in production mode
+    #[allow(unused)]
     pub fn is_production(&self) -> bool {
         self.app_environment.eq_ignore_ascii_case("production")
     }
@@ -86,15 +76,17 @@ fn leak_string(s: String) -> &'static str {
     Box::leak(Box::new(s))
 }
 
-// Convenience functions that return &'static str
+#[allow(unused)]
 pub fn encryption_key() -> &'static str {
     Config::global().encryption_key
 }
 
+#[allow(unused)]
 pub fn username_secret() -> &'static str {
     Config::global().username_secret
 }
 
+#[allow(unused)]
 pub fn session_secret() -> &'static str {
     Config::global().session_secret
 }
@@ -103,10 +95,12 @@ pub fn database_url() -> &'static str {
     Config::global().database_url
 }
 
+#[allow(unused)]
 pub fn app_environment() -> &'static str {
     Config::global().app_environment
 }
 
+#[allow(unused)]
 pub fn log_level() -> &'static str {
     Config::global().log_level
 }
