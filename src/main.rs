@@ -1,14 +1,10 @@
 /// Main enter point
 
-use axum::{
-    Router,
-    routing::{get, post},
-};
-mod db;
-mod config;
-mod routes;
-use routes::{get_problems, get_profile, get_login, post_login, get_register, post_register};
-mod schemas;
+use hotfix::create_router;
+pub mod db;
+pub mod config;
+pub mod routes;
+pub mod schemas;
 
 
 
@@ -29,14 +25,7 @@ async fn main() {
 
     let pool = db::init_pool().await;
 
-    let app = Router::new()
-        .route("/register", get(get_register))
-        .route("/register", post(post_register))
-        .route("/login", get(get_login))
-        .route("/login", post(post_login))
-        .route("/profile", get(get_profile))
-        .route("/problems", get(get_problems))
-        .with_state(pool);
+    let app = create_router(pool).await;
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:8000").await.unwrap();
     tracing::info!("listening on {}", listener.local_addr().unwrap());
