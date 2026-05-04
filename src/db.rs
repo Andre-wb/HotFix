@@ -79,7 +79,6 @@ pub async fn get_user_by_identifier(
     pool: &DbPool,
     identifier: &str,
 ) -> Result<Option<User>, sqlx::Error> {
-    // FIXED: Added space after users
     let query = "
         SELECT * FROM users
         WHERE username = $1 OR email = $1
