@@ -1,7 +1,11 @@
+/// Library for integration tests
+
 pub mod config;
 pub mod db;
 pub mod routes;
 pub mod schemas;
+pub mod email; 
+pub mod auth;
 
 pub use config::Config;
 pub use db::DbPool;

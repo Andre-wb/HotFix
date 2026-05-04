@@ -1,3 +1,5 @@
+/// Configuration file for setting all the environment variables
+
 use dotenvy::dotenv;
 use std::env;
 use std::sync::OnceLock;
@@ -9,6 +11,9 @@ impl Config {
     /// Initialize configuration from environment variables
     pub fn init() -> Result<&'static Config, String> {
         dotenv().ok();
+        let smtp_port: u16 = get_env("SMTP_PORT")?
+            .parse()
+            .map_err(|_| "SMTP_PORT must be a valid number".to_string())?;
 
         let config = Config {
             encryption_key: leak_string(get_env("ENCRYPTION_KEY")?),
@@ -17,6 +22,11 @@ impl Config {
             database_url: leak_string(get_env("DATABASE_URL")?),
             app_environment: leak_string(get_env("APP_ENVIRONMENT")?),
             log_level: leak_string(get_env("LOG_LEVEL")?),
+            smtp_host: leak_string(get_env("SMTP_HOST")?),
+            smtp_port,
+            smtp_username: leak_string(get_env("SMTP_USERNAME")?),
+            smtp_password: leak_string(get_env("SMTP_PASSWORD")?),
+            smtp_from: leak_string(get_env("SMTP_FROM")?),
         };
 
         // Validate configuration

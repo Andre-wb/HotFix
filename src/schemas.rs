@@ -57,7 +57,6 @@ impl std::fmt::Display for Difficulty {
     }
 }
 
-
 #[derive(Debug, Clone)]
 pub struct Config {
     pub encryption_key: &'static str,
@@ -66,6 +65,30 @@ pub struct Config {
     pub database_url: &'static str,
     pub app_environment: &'static str,
     pub log_level: &'static str,
+    pub smtp_host: &'static str,
+    pub smtp_port: u16,
+    pub smtp_username: &'static str,
+    pub smtp_password: &'static str,
+    pub smtp_from: &'static str,
+}
+
+#[derive(Debug, FromRow)]
+pub struct EmailVerificationCode {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub code_hash: String,
+    pub expires_at: DateTime<Utc>,
+    pub used: bool,
+    pub attempts: i32,
+    pub created_at: DateTime<Utc>,
+}
+
+pub enum CodeVerificationResult {
+    Valid,
+    Invalid,
+    Expired,
+    TooManyAttempts,
+    AlreadyUsed,
 }
 
 
