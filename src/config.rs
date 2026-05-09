@@ -29,10 +29,8 @@ impl Config {
             smtp_from: leak_string(get_env("SMTP_FROM")?),
         };
 
-        // Validate configuration
         config.validate()?;
 
-        // Store in OnceLock
         CONFIG.set(config)
             .map_err(|_| "Failed to set global configuration".to_string())?;
 
@@ -41,7 +39,13 @@ impl Config {
 
     /// Get global configuration instance
     pub fn global() -> &'static Config {
-        CONFIG.get().expect("Configuration not initialized. Call Config::init() first")
+        match CONFIG.get() {
+            Some(config) => config,
+            None => {
+                eprintln!("ERROR: Configuration not initialized. Call Config::init() first");
+                std::process::exit(1);
+            }
+        }
     }
 
     /// Validate configuration values

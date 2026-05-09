@@ -11,6 +11,7 @@ pub use config::Config;
 pub use db::DbPool;
 pub use routes::*;
 pub use schemas::*;
+pub use auth::*;
 
 pub async fn create_router(pool: DbPool) -> axum::Router {
     use axum::{Router, routing::{get, post}};
@@ -26,5 +27,7 @@ pub async fn create_router(pool: DbPool) -> axum::Router {
         .route("/login", post(post_login))
         .route("/profile", get(get_profile))
         .route("/problems", get(get_problems))
+        .route("/2fa_confirm", get(get_2fa))
+        .route("/2fa_confirm", post(post_2fa))
         .with_state(pool)
 }

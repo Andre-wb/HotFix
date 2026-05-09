@@ -60,9 +60,9 @@ pub async fn create_user(
     password_hash: &str,
 ) -> Result<User, sqlx::Error> {
     let query = "
-        INSERT INTO users (username, email, password_hash, created_at, rank, problems_solved, tags)
-        VALUES ($1, $2, $3, NOW(), 'beginner', 0, '{}'::jsonb)
-        RETURNING id, username, email, password_hash, created_at, rank, problems_solved, tags
+        INSERT INTO users (username, email, password_hash, created_at, rank, problems_solved, tags, email_verified)
+        VALUES ($1, $2, $3, NOW(), 'beginner', 0, '{}'::jsonb, FALSE)
+        RETURNING id, username, email, password_hash, created_at, rank, problems_solved, tags, last_login_at, email_verified
     ";
 
     let user = sqlx::query_as::<_, User>(query)
@@ -80,7 +80,9 @@ pub async fn get_user_by_identifier(
     identifier: &str,
 ) -> Result<Option<User>, sqlx::Error> {
     let query = "
-        SELECT * FROM users
+        SELECT id, username, email, password_hash, created_at, rank,
+               problems_solved, tags, last_login_at, email_verified
+        FROM users
         WHERE username = $1 OR email = $1
         LIMIT 1
     ";

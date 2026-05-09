@@ -18,6 +18,8 @@ pub struct User {
     pub rank: String,
     pub problems_solved: i32, // for tracking how many problems user solved
     pub tags: Value, // for tracking topics of problems which user solved and how many problems user solved in 1 exact topic
+    pub last_login_at: Option<DateTime<Utc>>,
+    pub email_verified: bool,
 }
 
 #[derive(Debug, FromRow)]
@@ -89,6 +91,17 @@ pub enum CodeVerificationResult {
     Expired,
     TooManyAttempts,
     AlreadyUsed,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct TwoFaForm {
+    pub confirm_code: String,
+}
+
+#[derive(Template)]
+#[template(path = "2fa.html")]
+pub struct TwoFaTemplate {
+    pub flash_message: Option<String>,
 }
 
 

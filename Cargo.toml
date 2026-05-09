@@ -32,3 +32,4 @@ hex = "0.4.3"
 tower-sessions = "0.13"
 tower-sessions-sqlx-store = { version = "0.14", features = ["postgres"] }
 time = "0.3.47"
+subtle = { version = "2.6", features = ["default"] }
