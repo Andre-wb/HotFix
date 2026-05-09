@@ -29,11 +29,21 @@ const SESSION_PENDING_TYPE: &str = "pending_2fa_type";
 const SESSION_USER_ID: &str = "user_id";
 
 pub async fn get_register(flash_message: Option<String>) -> Html<String> {
-    Html(RegisterTemplate { flash_message }.render().unwrap())
+    Html(RegisterTemplate {
+        flash_message,
+        username: None,
+        email: None,
+        password: None,
+        confirm_password: None,
+    }.render().unwrap())
 }
 
 pub async fn get_login(flash_message: Option<String>) -> Html<String> {
-    Html(LoginTemplate { flash_message }.render().unwrap())
+    Html(LoginTemplate {
+        flash_message,
+        identifier: None,
+        password: None,
+    }.render().unwrap())
 }
 
 pub async fn get_profile(_flash_message: Option<String>) -> Html<String> {
@@ -48,7 +58,10 @@ pub async fn get_2fa(session: Session) -> Result<Html<String>, Redirect> {
     if session.get::<String>(SESSION_PENDING_USER).await.ok().flatten().is_none() {
         return Err(Redirect::to("/login"));
     }
-    Ok(Html(TwoFaTemplate { flash_message: None }.render().unwrap()))
+    Ok(Html(TwoFaTemplate {
+        flash_message: None,
+        confirm_code: None,
+    }.render().unwrap()))
 }
 
 pub async fn post_register(
@@ -58,7 +71,11 @@ pub async fn post_register(
 ) -> Result<Redirect, Html<String>> {
     if let Err(error_message) = db::validate_registration(&form) {
         let error_html = RegisterTemplate {
-            flash_message: Some(error_message)
+            flash_message: Some(error_message),
+            username: Some(form.username.clone()),
+            email: Some(form.email.clone()),
+            password: Some(form.password.clone()),
+            confirm_password: Some(form.confirm_password.clone()),
         }.render().unwrap();
         return Err(Html(error_html));
     }
@@ -66,14 +83,22 @@ pub async fn post_register(
     match db::user_exists(&pool, &form.username, &form.email).await {
         Ok(true) => {
             let error_html = RegisterTemplate {
-                flash_message: Some("Username or email already exists".to_string())
+                flash_message: Some("Username or email already exists".to_string()),
+                username: Some(form.username.clone()),
+                email: Some(form.email.clone()),
+                password: Some(form.password.clone()),
+                confirm_password: Some(form.confirm_password.clone()),
             }.render().unwrap();
             return Err(Html(error_html));
         }
         Err(error) => {
             tracing::error!("Database error checking user: {}", error);
             let error_html = RegisterTemplate {
-                flash_message: Some("An error occurred. Please try again.".to_string())
+                flash_message: Some("An error occurred. Please try again.".to_string()),
+                username: Some(form.username.clone()),
+                email: Some(form.email.clone()),
+                password: Some(form.password.clone()),
+                confirm_password: Some(form.confirm_password.clone()),
             }.render().unwrap();
             return Err(Html(error_html));
         }
@@ -85,7 +110,11 @@ pub async fn post_register(
         Err(error) => {
             tracing::error!("Failed to create password hash: {}", error);
             let error_html = RegisterTemplate {
-                flash_message: Some("Error while processing request".to_string())
+                flash_message: Some("Error while processing request".to_string()),
+                username: Some(form.username.clone()),
+                email: Some(form.email.clone()),
+                password: Some(form.password.clone()),
+                confirm_password: Some(form.confirm_password.clone()),
             }.render().unwrap();
             return Err(Html(error_html));
         }
@@ -96,7 +125,11 @@ pub async fn post_register(
         Err(error) => {
             tracing::error!("Failed to create user: {}", error);
             let error_html = RegisterTemplate {
-                flash_message: Some("Error while creating account".to_string())
+                flash_message: Some("Error while creating account".to_string()),
+                username: Some(form.username.clone()),
+                email: Some(form.email.clone()),
+                password: Some(form.password.clone()),
+                confirm_password: Some(form.confirm_password.clone()),
             }.render().unwrap();
             return Err(Html(error_html));
         }
@@ -107,7 +140,11 @@ pub async fn post_register(
         Err(e) => {
             tracing::error!("Code gen error: {}", e);
             let error_html = RegisterTemplate {
-                flash_message: Some("Error while generating verification code".to_string())
+                flash_message: Some("Error while generating verification code".to_string()),
+                username: Some(form.username.clone()),
+                email: Some(form.email.clone()),
+                password: Some(form.password.clone()),
+                confirm_password: Some(form.confirm_password.clone()),
             }.render().unwrap();
             return Err(Html(error_html));
         }
@@ -136,14 +173,18 @@ pub async fn post_login(
         Ok(Some(user)) => user,
         Ok(None) => {
             let error_html = LoginTemplate {
-                flash_message: Some("Invalid username/email or password".to_string())
+                flash_message: Some("Invalid username/email or password".to_string()),
+                identifier: Some(form.identifier.clone()),
+                password: Some(form.password.clone()),
             }.render().unwrap();
             return Err(Html(error_html));
         },
         Err(error) => {
             tracing::error!("Database error: {}", error);
             let error_html = LoginTemplate {
-                flash_message: Some("An error occurred. Please try again".to_string())
+                flash_message: Some("An error occurred. Please try again".to_string()),
+                identifier: Some(form.identifier.clone()),
+                password: Some(form.password.clone()),
             }.render().unwrap();
             return Err(Html(error_html));
         }
@@ -153,14 +194,18 @@ pub async fn post_login(
         Ok(true) => {}
         Ok(false) => {
             let error_html = LoginTemplate {
-                flash_message: Some("Invalid username/email or password".to_string())
+                flash_message: Some("Invalid username/email or password".to_string()),
+                identifier: Some(form.identifier.clone()),
+                password: Some(form.password.clone()),
             }.render().unwrap();
             return Err(Html(error_html));
         }
         Err(error) => {
             tracing::error!("Password verification error: {}", error);
             let error_html = LoginTemplate {
-                flash_message: Some("An error occurred. Please try again.".to_string())
+                flash_message: Some("An error occurred. Please try again.".to_string()),
+                identifier: Some(form.identifier.clone()),
+                password: Some(form.password.clone()),
             }.render().unwrap();
             return Err(Html(error_html));
         }
@@ -172,7 +217,9 @@ pub async fn post_login(
             Err(error) => {
                 tracing::error!("Failed to create verification code: {}", error);
                 let error_html = LoginTemplate {
-                    flash_message: Some("Error sending verification code. Please try again.".to_string())
+                    flash_message: Some("Error sending verification code. Please try again.".to_string()),
+                    identifier: Some(form.identifier.clone()),
+                    password: Some(form.password.clone()),
                 }.render().unwrap();
                 return Err(Html(error_html));
             }
@@ -202,7 +249,9 @@ pub async fn post_login(
             Err(error) => {
                 tracing::error!("Failed to create verification code: {}", error);
                 let error_html = LoginTemplate {
-                    flash_message: Some("Failed to send verification email. Please try again".to_string())
+                    flash_message: Some("Failed to send verification email. Please try again".to_string()),
+                    identifier: Some(form.identifier.clone()),
+                    password: Some(form.password.clone()),
                 }.render().unwrap();
                 return Err(Html(error_html));
             }
@@ -224,7 +273,8 @@ pub async fn post_login(
         if let Err(error) = complete_login(&pool, &session, user.id).await {
             tracing::error!("Error completing authentication: {}", error);
             let error_html = TwoFaTemplate {
-                flash_message: Some("Error while completing authentication. Please try again".to_string())
+                flash_message: Some("Error while completing authentication. Please try again".to_string()),
+                confirm_code: None,
             }.render().unwrap();
             return Err(Html(error_html));
         }
@@ -242,7 +292,8 @@ pub async fn post_2fa(
         None => {
             tracing::warn!("2FA attempt with expired session");
             let error_html = TwoFaTemplate {
-                flash_message: Some("Your session expired. Please sign in again".to_string())
+                flash_message: Some("Your session expired. Please sign in again".to_string()),
+                confirm_code: Some(form.confirm_code.clone()),
             }.render().unwrap();
             return Err(Html(error_html));
         }
@@ -253,7 +304,8 @@ pub async fn post_2fa(
         Err(error) => {
             tracing::error!("Invalid UUID in session: {}", error);
             let error_html = TwoFaTemplate {
-                flash_message: Some("Session error. Please sign in again".to_string())
+                flash_message: Some("Session error. Please sign in again".to_string()),
+                confirm_code: Some(form.confirm_code.clone()),
             }.render().unwrap();
             return Err(Html(error_html));
         }
@@ -270,7 +322,8 @@ pub async fn post_2fa(
                 if let Err(error) = mark_email_verified(&pool, user_id).await {
                     tracing::error!("Failed to mark email verified: {}", error);
                     let error_html = TwoFaTemplate {
-                        flash_message: Some("Error while verifying code. Please try again".to_string())
+                        flash_message: Some("Error while verifying code. Please try again".to_string()),
+                        confirm_code: Some(form.confirm_code.clone()),
                     }.render().unwrap();
                     return Err(Html(error_html));
                 }
@@ -279,7 +332,8 @@ pub async fn post_2fa(
             if let Err(error) = complete_login(&pool, &session, user_id).await {
                 tracing::error!("Failed to complete authentication: {}", error);
                 let error_html = TwoFaTemplate {
-                    flash_message: Some("Error completing authentication. Please try again".to_string())
+                    flash_message: Some("Error completing authentication. Please try again".to_string()),
+                    confirm_code: Some(form.confirm_code.clone()),
                 }.render().unwrap();
                 return Err(Html(error_html));
             }
@@ -288,28 +342,33 @@ pub async fn post_2fa(
         }
         Ok(CodeVerificationResult::Invalid) => {
             Err(Html(TwoFaTemplate {
-                flash_message: Some("Incorrect code".to_string())
+                flash_message: Some("Incorrect code".to_string()),
+                confirm_code: Some(form.confirm_code.clone()),
             }.render().unwrap()))
         }
         Ok(CodeVerificationResult::Expired) => {
             Err(Html(TwoFaTemplate {
-                flash_message: Some("Code expired. Please go back and request a new one".to_string())
+                flash_message: Some("Code expired. Please go back and request a new one".to_string()),
+                confirm_code: Some(form.confirm_code.clone()),
             }.render().unwrap()))
         }
         Ok(CodeVerificationResult::TooManyAttempts) => {
             Err(Html(TwoFaTemplate {
-                flash_message: Some("Too many failed attempts. Please request a new code".to_string())
+                flash_message: Some("Too many failed attempts. Please request a new code".to_string()),
+                confirm_code: Some(form.confirm_code.clone()),
             }.render().unwrap()))
         }
         Ok(CodeVerificationResult::AlreadyUsed) => {
             Err(Html(TwoFaTemplate {
-                flash_message: Some("Code already used".to_string())
+                flash_message: Some("Code already used".to_string()),
+                confirm_code: Some(form.confirm_code.clone()),
             }.render().unwrap()))
         }
         Err(error) => {
             tracing::error!("Failed to verify code: {}", error);
             Err(Html(TwoFaTemplate {
-                flash_message: Some("An error occurred".to_string())
+                flash_message: Some("An error occurred".to_string()),
+                confirm_code: Some(form.confirm_code.clone()),
             }.render().unwrap()))
         }
     }

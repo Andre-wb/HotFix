@@ -102,19 +102,25 @@ pub struct TwoFaForm {
 #[template(path = "2fa.html")]
 pub struct TwoFaTemplate {
     pub flash_message: Option<String>,
+    pub confirm_code: Option<String>,
 }
-
 
 #[derive(Template)]
 #[template(path = "register.html")]
 pub struct RegisterTemplate {
     pub flash_message: Option<String>,
+    pub username: Option<String>,
+    pub email: Option<String>,
+    pub password: Option<String>,
+    pub confirm_password: Option<String>,
 }
 
 #[derive(Template)]
 #[template(path = "login.html")]
 pub struct LoginTemplate {
     pub flash_message: Option<String>,
+    pub identifier: Option<String>,
+    pub password: Option<String>,
 }
 
 #[derive(Template)]
@@ -132,7 +138,6 @@ pub struct RegisterForm {
     pub password: String,
     pub confirm_password: String,
 }
-
 
 #[derive(Deserialize, Debug)]
 pub struct LoginForm {

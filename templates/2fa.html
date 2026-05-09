@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 
-{% block title %}Confirm email{% endblock %}
+{% block title %}2FA Verification{% endblock %}
 
 {% block main %}
 {% if let Some(message) = flash_message %}
 <div>{{ message }}</div>
 {% endif %}
-<p>Verification code has been sent to your email. Enter it to confirm your email.</p>
+
 <form action="/2fa_confirm" method="post">
-    <input type="text" name="confirm_code" placeholder="000000" required><br>
-    <button type="submit">Confirm</button>
+    <input type="text" name="confirm_code" placeholder="Enter verification code" value="{{ confirm_code.as_deref().unwrap_or("") }}" required><br>
+    <button type="submit">Verify</button>
 </form>
 {% endblock %}
