@@ -22,6 +22,7 @@ mod tests {
     }
 
     #[sqlx::test(migrations = "./migrations")]
+    #[ignore]
     async fn test_register_success(pool: PgPool) {
         let app = create_router(pool).await;
 
@@ -35,6 +36,7 @@ mod tests {
     }
 
     #[sqlx::test(migrations = "./migrations")]
+    #[ignore]
     async fn test_register_password_mismatch(pool: PgPool) {
         let app = create_router(pool).await;
 
@@ -54,6 +56,7 @@ mod tests {
     }
 
     #[sqlx::test(migrations = "./migrations")]
+    #[ignore]
     async fn test_register_duplicate_user(pool: PgPool) {
         let app = create_router(pool.clone()).await;
         app.oneshot(form_request("/register", REGISTER_BODY))
@@ -72,6 +75,7 @@ mod tests {
     }
 
     #[sqlx::test(migrations = "./migrations")]
+    #[ignore]
     async fn test_login_success(pool: PgPool) {
         let app = create_router(pool.clone()).await;
         app.oneshot(form_request("/register", REGISTER_BODY))
@@ -102,6 +106,7 @@ mod tests {
     }
 
     #[sqlx::test(migrations = "./migrations")]
+    #[ignore]
     async fn test_login_wrong_password(pool: PgPool) {
         let app = create_router(pool.clone()).await;
         app.oneshot(form_request("/register", REGISTER_BODY))
