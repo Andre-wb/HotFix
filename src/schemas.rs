@@ -2,6 +2,7 @@
 
 use askama::Template;
 use chrono::{DateTime, Utc};
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::FromRow;
@@ -23,22 +24,54 @@ pub struct User {
 }
 
 #[derive(Debug, FromRow)]
-#[allow(unused)]
-pub struct Problems {
+pub struct Problem {
     pub id: Uuid,
     pub name: String,
     pub topics: Vec<String>,
     pub language: String,
     pub difficulty: Difficulty,
-    /// Problem have incorrect code, which user need to fix and description about what correct code should do
-    /// User's attempts checks with tests
-    /// User's code have to pass all the test just like correct version to mark as solved
     pub correct_version: String,
     pub incorrect_version: String,
-    pub tests: Value, // to test which output we get from program with particular input
-    pub time_limit_seconds: i32, // how much time users have to solve the problem
+    pub tests: Value,
+    pub time_limit_seconds: i32,
     pub description: String,
     pub solved_count: i32,
+}
+
+#[derive(Template)]
+#[template(path = "problem.html")]
+pub struct ProblemTemplate {
+    pub problem: Problem,
+    pub start_time: i64,
+}
+
+#[derive(Template)]
+#[template(path = "problems.html")]
+pub struct ProblemsTemplate {
+    pub problems: Vec<Problem>,
+}
+
+#[derive(Deserialize)]
+pub struct SubmitForm {
+    pub code: String,
+    pub start_time: i64,
+}
+
+#[derive(Template)]
+#[template(path = "results.html")]
+pub struct ResultsTemplate {
+    pub passed: i32,
+    pub total: i32,
+    pub all_passed: bool,
+    pub results: Vec<TestResult>,
+}
+
+#[derive(Debug, Clone)]
+pub struct TestResult {
+    pub input: String,
+    pub expected: String,
+    pub actual: String,
+    pub passed: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, sqlx::Type, Serialize, Deserialize)]
@@ -57,6 +90,34 @@ impl std::fmt::Display for Difficulty {
             Difficulty::Hard => write!(f, "hard"),
         }
     }
+}
+
+pub struct AiService {
+    pub client: Client,
+    pub url: String,
+    pub model: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct OllamaResponse {
+    pub response: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct TestCase {
+    pub input: String,
+    pub expected_output: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GeneratedProblem {
+    pub name: String,
+    pub topics: Vec<String>,
+    pub description: String,
+    pub incorrect_version: String,
+    pub correct_version: String,
+    pub tests: Vec<TestCase>,
+    pub time_limit_seconds: i32,
 }
 
 #[derive(Debug, Clone)]
@@ -126,10 +187,6 @@ pub struct LoginTemplate {
 #[derive(Template)]
 #[template(path = "profile.html")]
 pub struct ProfileTemplate;
-
-#[derive(Template)]
-#[template(path = "problems.html")]
-pub struct ProblemsTemplate;
 
 #[derive(Deserialize, Debug)]
 pub struct RegisterForm {

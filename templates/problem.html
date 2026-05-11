@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ problem.name }}{% endblock %}
+{% block main %}
+<h1>{{ problem.name }}</h1>
+<div class="meta">
+    <span class="difficulty">{{ problem.difficulty }}</span>
+    <span class="lang">{{ problem.language }}</span>
+    <span class="timer">Time limit: <span id="timer">{{ problem.time_limit_seconds }}</span>s</span>
+</div>
+
+<div class="description">
+    <p>{{ problem.description }}</p>
+</div>
+
+<form action="/problems/{{ problem.id }}/submit" method="post" id="solve-form">
+    <input type="hidden" name="start_time" value="{{ start_time }}">
+    <label>Fix the code:</label>
+    <textarea name="code" rows="25" cols="100" required>{{ problem.incorrect_version }}</textarea>
+    <button type="submit">Submit Solution</button>
+</form>
+
+<script>
+    let timeLeft = {{ problem.time_limit_seconds }};
+    const timerEl = document.getElementById('timer');
+    const form = document.getElementById('solve-form');
+
+    const interval = setInterval(() => {
+        timeLeft--;
+        timerEl.textContent = timeLeft;
+        if (timeLeft <= 0) {
+            clearInterval(interval);
+            form.querySelector('button').disabled = true;
+            timerEl.textContent = "EXPIRED";
+            alert("Time's up!");
+        }
+    }, 1000);
+</script>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Results{% endblock %}
+{% block main %}
+<h1>{% if all_passed %}✅ Accepted!{% else %}❌ Wrong Answer{% endif %}</h1>
+<p>Passed {{ passed }} / {{ total }} tests</p>
+
+{% for result in results %}
+<div class="test-case {% if result.passed %}pass{% else %}fail{% endif %}">
+    <h4>Test {{ loop.index }} {% if result.passed %}✓{% else %}✗{% endif %}</h4>
+    <pre>Input: {{ result.input }}</pre>
+    <pre>Expected: {{ result.expected }}</pre>
+    <pre>Got: {{ result.actual }}</pre>
+</div>
+{% endfor %}
+
+<a href="/problems">Back to problems</a>
+{% endblock %}

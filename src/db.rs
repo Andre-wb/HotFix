@@ -11,13 +11,98 @@ use argon2::{
     Argon2,
 };
 use sqlx::{PgPool, migrate::Migrator};
-use crate::schemas::{RegisterForm, User};
+use crate::schemas::{RegisterForm, User, Difficulty, Problem, GeneratedProblem};
+use uuid::Uuid;
 
 
 pub type DbPool = PgPool;
 pub static MIGRATOR: Migrator = sqlx::migrate!();
 
 
+pub async fn create_problem(
+    pool: &DbPool,
+    problem: &GeneratedProblem,
+    language: &str,
+    difficulty: Difficulty,
+) -> Result<Problem, sqlx::Error> {
+    let query = "
+        INSERT INTO problems (id, name, topics, language, difficulty, correct_version, incorrect_version, tests, time_limit_seconds, description, solved_count)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 0)
+        RETURNING id, name, topics, language, difficulty, correct_version, incorrect_version, tests, time_limit_seconds, description, solved_count
+    ";
+
+    let tests_json = serde_json::to_value(&problem.tests).unwrap_or_default();
+
+    let problem = sqlx::query_as::<_, Problem>(query)
+        .bind(Uuid::new_v4())
+        .bind(&problem.name)
+        .bind(&problem.topics)
+        .bind(language)
+        .bind(difficulty)
+        .bind(&problem.correct_version)
+        .bind(&problem.incorrect_version)
+        .bind(tests_json)
+        .bind(problem.time_limit_seconds)
+        .bind(&problem.description)
+        .fetch_one(pool)
+        .await?;
+
+    Ok(problem)
+}
+
+pub async fn get_problems(pool: &DbPool) -> Result<Vec<Problem>, sqlx::Error> {
+    let problems = sqlx::query_as::<_, Problem>(
+        "SELECT * FROM problems ORDER BY created_at DESC"
+    )
+        .fetch_all(pool)
+        .await?;
+    Ok(problems)
+}
+
+pub async fn get_problem(pool: &DbPool, id: Uuid) -> Result<Option<Problem>, sqlx::Error> {
+    let problem = sqlx::query_as::<_, Problem>(
+        "SELECT * FROM problems WHERE id = $1"
+    )
+        .bind(id)
+        .fetch_optional(pool)
+        .await?;
+    Ok(problem)
+}
+
+pub async fn save_submission(
+    pool: &DbPool,
+    problem_id: Uuid,
+    user_id: Option<Uuid>,
+    session_id: &str,
+    code: &str,
+    passed: i32,
+    total: i32,
+    status: &str,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "INSERT INTO submissions (id, problem_id, user_id, session_id, code, passed_tests, total_tests, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
+    )
+        .bind(Uuid::new_v4())
+        .bind(problem_id)
+        .bind(user_id)
+        .bind(session_id)
+        .bind(code)
+        .bind(passed)
+        .bind(total)
+        .bind(status)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
+
+pub async fn increment_solved_count(pool: &DbPool, problem_id: Uuid) -> Result<(), sqlx::Error> {
+    sqlx::query("UPDATE problems SET solved_count = solved_count + 1 WHERE id = $1")
+        .bind(problem_id)
+        .execute(pool)
+        .await?;
+    Ok(())
+}
 
 /// Initialize database connection pool
 pub async fn init_pool() -> DbPool {

@@ -1,7 +1,27 @@
 {% extends "base.html" %}
-
 {% block title %}Problems{% endblock %}
-
 {% block main %}
-<h1>Problems</h1>
+<h1>Programming Challenges</h1>
+<table>
+    <thead>
+    <tr>
+        <th>Name</th>
+        <th>Language</th>
+        <th>Difficulty</th>
+        <th>Solved</th>
+        <th>Time Limit</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for problem in problems %}
+    <tr>
+        <td><a href="/problems/{{ problem.id }}">{{ problem.name }}</a></td>
+        <td>{{ problem.language }}</td>
+        <td>{{ problem.difficulty }}</td>
+        <td>{{ problem.solved_count }}</td>
+        <td>{{ problem.time_limit_seconds }}s</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
 {% endblock %}

@@ -2,7 +2,7 @@
 
 use axum::{
     response::{Html, Redirect},
-    extract::State,
+    extract::{State, Path},
     Form,
 };
 use askama::Template;
@@ -10,7 +10,7 @@ use chrono::Utc;
 use tower_sessions::Session;
 use uuid::Uuid;
 use crate::email;
-use crate::db::{self, verify_password, hash_password};
+use crate::db::{self, verify_password, hash_password, DbPool};
 use crate::schemas::{
     LoginTemplate,
     ProblemsTemplate,
@@ -20,13 +20,24 @@ use crate::schemas::{
     LoginForm,
     CodeVerificationResult,
     TwoFaForm,
-    TwoFaTemplate
+    TwoFaTemplate,
+    ProblemTemplate,
+    AiService,
+    TestResult,
+    TestCase,
+    SubmitForm,
+    Difficulty,
+    ResultsTemplate,
 };
+use crate::sandbox::SandBox;
 use crate::auth::{create_verification_code, verify_code, mark_email_verified, update_last_login};
+use crate::problem_validation::validate_problem;
 
 const SESSION_PENDING_USER: &str = "pending_2fa_user_id";
 const SESSION_PENDING_TYPE: &str = "pending_2fa_type";
 const SESSION_USER_ID: &str = "user_id";
+const SESSION_SOLVED: &str = "solved_problems";
+
 
 pub async fn get_register(flash_message: Option<String>) -> Html<String> {
     Html(RegisterTemplate {
@@ -50,8 +61,28 @@ pub async fn get_profile(_flash_message: Option<String>) -> Html<String> {
     Html(ProfileTemplate.render().unwrap())
 }
 
-pub async fn get_problems(_flash_message: Option<String>) -> Html<String> {
-    Html(ProblemsTemplate.render().unwrap())
+pub async fn get_problems(State(pool): State<DbPool>) -> Html<String> {
+    let problems = db::get_problems(&pool).await.unwrap_or_default();
+    Html(ProblemsTemplate { problems }.render().unwrap())
+}
+
+pub async fn get_problem(
+    State(pool): State<DbPool>,
+    Path(id): Path<Uuid>,
+) -> Result<Html<String>, Redirect> {
+    let problem = match db::get_problem(&pool, id).await {
+        Ok(Some(p)) => p,
+        _ => return Err(Redirect::to("/problems")),
+    };
+
+    Ok(Html(
+        ProblemTemplate {
+            problem,
+            start_time: Utc::now().timestamp(),
+        }
+            .render()
+            .unwrap(),
+    ))
 }
 
 pub async fn get_2fa(session: Session) -> Result<Html<String>, Redirect> {
@@ -65,7 +96,7 @@ pub async fn get_2fa(session: Session) -> Result<Html<String>, Redirect> {
 }
 
 pub async fn post_register(
-    State(pool): State<db::DbPool>,
+    State(pool): State<DbPool>,
     session: Session,
     Form(form): Form<RegisterForm>,
 ) -> Result<Redirect, Html<String>> {
@@ -165,7 +196,7 @@ pub async fn post_register(
 }
 
 pub async fn post_login(
-    State(pool): State<db::DbPool>,
+    State(pool): State<DbPool>,
     session: Session,
     Form(form): Form<LoginForm>,
 ) -> Result<Redirect, Html<String>> {
@@ -283,7 +314,7 @@ pub async fn post_login(
 }
 
 pub async fn post_2fa(
-    State(pool): State<db::DbPool>,
+    State(pool): State<DbPool>,
     session: Session,
     Form(form): Form<TwoFaForm>,
 ) -> Result<Redirect, Html<String>> {
@@ -374,8 +405,230 @@ pub async fn post_2fa(
     }
 }
 
+pub async fn post_submit(
+    State(pool): State<DbPool>,
+    session: Session,
+    Path(problem_id): Path<Uuid>,
+    Form(form): Form<SubmitForm>,
+) -> Result<Html<String>, Redirect> {
+    let problem = match db::get_problem(&pool, problem_id).await {
+        Ok(Some(p)) => p,
+        _ => return Err(Redirect::to("/problems")),
+    };
+
+    // Check time limit
+    let elapsed = Utc::now().timestamp() - form.start_time;
+    if elapsed > problem.time_limit_seconds as i64 {
+        return Ok(Html("Time limit exceeded".to_string()));
+    }
+
+    let tests: Vec<TestCase> =
+        serde_json::from_value(problem.tests).unwrap_or_default();
+
+    let sandbox = SandBox::new();
+    let mut results = Vec::new();
+    let mut passed = 0;
+
+    for test in &tests {
+        match sandbox
+            .run(&problem.language, &form.code, &test.input, problem.time_limit_seconds as u64)
+            .await
+        {
+            Ok(output) => {
+                let ok = output.trim() == test.expected_output.trim();
+                if ok { passed += 1; }
+                results.push(TestResult {
+                    input: test.input.clone(),
+                    expected: test.expected_output.clone(),
+                    actual: output,
+                    passed: ok,
+                });
+            }
+            Err(e) => {
+                results.push(TestResult {
+                    input: test.input.clone(),
+                    expected: test.expected_output.clone(),
+                    actual: e.clone(),
+                    passed: false,
+                });
+            }
+        }
+    }
+
+    let all_passed = passed == tests.len() as i32;
+    let status = if all_passed { "accepted" } else { "wrong_answer" };
+
+    // Get user/session info
+    let user_id = session
+        .get::<String>(SESSION_USER_ID).await.ok().flatten()
+        .and_then(|id| Uuid::parse_str(&id).ok());
+
+    let session_id = format!("{:?}", session.id());
+
+    // Save submission
+    let _ = db::save_submission(
+        &pool, problem_id, user_id, &session_id,
+        &form.code, passed, tests.len() as i32, status,
+    ).await;
+
+    // Update stats
+    if all_passed {
+        let _ = db::increment_solved_count(&pool, problem_id).await;
+
+        // Track in session for guests
+        let mut solved: Vec<String> = session
+            .get(SESSION_SOLVED).await.ok().flatten()
+            .unwrap_or_default();
+
+        if !solved.contains(&problem_id.to_string()) {
+            solved.push(problem_id.to_string());
+            let _ = session.insert(SESSION_SOLVED, solved).await;
+        }
+
+        // Update user stats if logged in
+        if let Some(uid) = user_id {
+            // Add to user's solved count, update tags, etc.
+            let _ = sqlx::query(
+                "UPDATE users SET problems_solved = problems_solved + 1 WHERE id = $1"
+            )
+                .bind(uid)
+                .execute(&pool)
+                .await;
+        }
+    }
+
+    Ok(Html(
+        ResultsTemplate {
+            passed,
+            total: tests.len() as i32,
+            all_passed,
+            results,
+        }
+            .render()
+            .unwrap(),
+    ))
+}
+
+// Admin endpoint to generate problems
+pub async fn post_generate_problem(State(pool): State<DbPool>) -> Result<Redirect, String> {
+    eprintln!("\n╔══════════════════════════════════════════════════════════════╗");
+    eprintln!("║           PROBLEM GENERATION REQUEST RECEIVED                ║");
+    eprintln!("╚══════════════════════════════════════════════════════════════╝");
+
+    let ai = AiService::new();
+    let sandbox = SandBox::new();
+
+    eprintln!("\n📝 AI Service initialized");
+    eprintln!("🔧 Sandbox initialized");
+
+    let mut problem = None;
+    let max_attempts = 3;
+
+    for attempt in 0..max_attempts {
+        eprintln!("\n┌────────────────────────────────────────────────────────────┐");
+        eprintln!("│ ATTEMPT {}/{}                                              │", attempt + 1, max_attempts);
+        eprintln!("└────────────────────────────────────────────────────────────┘");
+
+        eprintln!("🤖 Requesting AI to generate problem (language: rust, difficulty: medium)...");
+
+        match ai.generate_problem("rust", "medium").await {
+            Ok(p) => {
+                eprintln!("✓ AI generated problem successfully");
+                eprintln!("  Title: {}", p.name);
+                eprintln!("  Tests count: {}", p.tests.len());
+                eprintln!("  Time limit: {} seconds", p.time_limit_seconds);
+                eprintln!("  Correct version length: {} chars", p.correct_version.len());
+                eprintln!("  Incorrect version length: {} chars", p.incorrect_version.len());
+
+                eprintln!("\n🔍 Validating problem...");
+                match validate_problem(&sandbox, &p, "rust").await {
+                    Ok(()) => {
+                        eprintln!("✅ Problem VALID!");
+                        problem = Some(p);
+                        break;
+                    }
+                    Err(e) => {
+                        eprintln!("❌ Validation FAILED: {}", e);
+                        eprintln!("   This problem will be discarded, retrying...");
+
+                        // Log more details about the problem that failed
+                        eprintln!("\n📋 Failed problem details:");
+                        eprintln!("   Title: {}", p.name);
+                        for (i, test) in p.tests.iter().enumerate() {
+                            eprintln!("   Test {}: input={:?} expected={:?}",
+                                      i, test.input, test.expected_output);
+                        }
+                    }
+                }
+            }
+            Err(e) => {
+                eprintln!("❌ AI generation FAILED: {}", e);
+                eprintln!("   Error type: {}", std::any::type_name_of_val(&e));
+
+                // Try to get more error context if possible
+                if e.to_string().contains("timeout") {
+                    eprintln!("   ⏰ This appears to be a timeout error");
+                } else if e.to_string().contains("api") || e.to_string().contains("key") {
+                    eprintln!("   🔑 This appears to be an API key or authentication error");
+                } else if e.to_string().contains("network") {
+                    eprintln!("   🌐 This appears to be a network connectivity error");
+                }
+            }
+        }
+
+        if attempt < max_attempts - 1 {
+            eprintln!("\n⏳ Waiting 1 second before next attempt...");
+            tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+        }
+    }
+
+    eprintln!("\n┌────────────────────────────────────────────────────────────┐");
+    eprintln!("│ FINAL RESULT                                             │");
+    eprintln!("└────────────────────────────────────────────────────────────┘");
+
+    let problem = match problem {
+        Some(p) => {
+            eprintln!("✅ Problem generated successfully after validation!");
+            eprintln!("   Title: {}", p.name);
+            p
+        }
+        None => {
+            eprintln!("❌ FAILED to generate a valid problem after {} attempts", max_attempts);
+            eprintln!("\n🔧 TROUBLESHOOTING SUGGESTIONS:");
+            eprintln!("   1. Check if AI service API key is properly configured");
+            eprintln!("   2. Verify that the AI service endpoint is reachable");
+            eprintln!("   3. Check if the AI model is returning valid code");
+            eprintln!("   4. Verify sandbox execution environment is working");
+            eprintln!("   5. Check if the AI is generating both correct and incorrect versions");
+            eprintln!("   6. Verify test cases have proper input/output pairs");
+
+            eprintln!("\n💡 To test individual components:");
+            eprintln!("   - Test AI generation alone: cargo test test_ai_generation");
+            eprintln!("   - Test sandbox alone: cargo test test_sandbox");
+            eprintln!("   - Test validation alone with mock problem");
+
+            return Err("Failed to generate valid problem after 3 attempts".to_string());
+        }
+    };
+
+    eprintln!("\n💾 Saving problem to database...");
+    match db::create_problem(&pool, &problem, "rust", Difficulty::Medium).await {
+        Ok(_) => {
+            eprintln!("✅ Problem saved to database successfully!");
+            eprintln!("\n╔══════════════════════════════════════════════════════════════╗");
+            eprintln!("║           PROBLEM GENERATION COMPLETE ✅                      ║");
+            eprintln!("╚══════════════════════════════════════════════════════════════╝\n");
+            Ok(Redirect::to("/problems"))
+        }
+        Err(e) => {
+            eprintln!("❌ Failed to save problem to database: {}", e);
+            Err(e.to_string())
+        }
+    }
+}
+
 async fn complete_login(
-    pool: &db::DbPool,
+    pool: &DbPool,
     session: &Session,
     user_id: Uuid,
 ) -> Result<(), String> {
@@ -384,4 +637,28 @@ async fn complete_login(
     session.insert(SESSION_USER_ID, user_id.to_string()).await
         .map_err(|e| e.to_string())?;
     Ok(())
+}
+
+#[allow(unused)]
+async fn merge_guest_progress(pool: &DbPool, session: &Session, user_id: Uuid) {
+    let solved: Vec<String> = session
+        .get("solved_problems").await.ok().flatten()
+        .unwrap_or_default();
+
+    for problem_id_str in solved {
+        if let Ok(pid) = Uuid::parse_str(&problem_id_str) {
+            // Update submissions to link to user
+            let _ = sqlx::query(
+                "UPDATE submissions SET user_id = $1
+                 WHERE session_id = $2 AND problem_id = $3 AND user_id IS NULL"
+            )
+                .bind(user_id)
+                .bind(format!("{:?}", session.id()))
+                .bind(pid)
+                .execute(pool)
+                .await;
+        }
+    }
+
+    let _ = session.remove::<Vec<String>>("solved_problems").await;
 }
