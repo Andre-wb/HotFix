@@ -4,7 +4,7 @@ pub mod config;
 pub mod db;
 pub mod routes;
 pub mod schemas;
-pub mod email; 
+pub mod email;
 pub mod auth;
 pub mod ai;
 pub mod sandbox;
@@ -15,6 +15,8 @@ pub use db::DbPool;
 pub use routes::*;
 pub use schemas::*;
 pub use auth::*;
+
+use tower_http::services::ServeDir;
 
 pub async fn create_router(pool: DbPool) -> axum::Router {
     use axum::{Router, routing::{get, post}};
@@ -36,5 +38,6 @@ pub async fn create_router(pool: DbPool) -> axum::Router {
         .route("/admin/generate", post(post_generate_problem))
         .route("/2fa_confirm", get(get_2fa))
         .route("/2fa_confirm", post(post_2fa))
+        .nest_service("/static", ServeDir::new("static"))
         .with_state(pool)
 }

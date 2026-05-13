@@ -36,6 +36,7 @@ pub struct Problem {
     pub time_limit_seconds: i32,
     pub description: String,
     pub solved_count: i32,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Template)]

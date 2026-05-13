@@ -28,7 +28,7 @@ pub async fn create_problem(
     let query = "
         INSERT INTO problems (id, name, topics, language, difficulty, correct_version, incorrect_version, tests, time_limit_seconds, description, solved_count)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 0)
-        RETURNING id, name, topics, language, difficulty, correct_version, incorrect_version, tests, time_limit_seconds, description, solved_count
+        RETURNING id, name, topics, language, difficulty, correct_version, incorrect_version, tests, time_limit_seconds, description, solved_count, created_at
     ";
 
     let tests_json = serde_json::to_value(&problem.tests).unwrap_or_default();

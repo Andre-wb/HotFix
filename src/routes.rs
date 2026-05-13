@@ -4,6 +4,7 @@ use axum::{
     response::{Html, Redirect},
     extract::{State, Path},
     Form,
+    http::{HeaderMap, StatusCode},
 };
 use askama::Template;
 use chrono::Utc;
@@ -463,7 +464,7 @@ pub async fn post_submit(
         .get::<String>(SESSION_USER_ID).await.ok().flatten()
         .and_then(|id| Uuid::parse_str(&id).ok());
 
-    let session_id = format!("{:?}", session.id());
+    let session_id = session.id().map(|s| s.to_string()).unwrap_or_default();
 
     // Save submission
     let _ = db::save_submission(
@@ -510,121 +511,45 @@ pub async fn post_submit(
 }
 
 // Admin endpoint to generate problems
-pub async fn post_generate_problem(State(pool): State<DbPool>) -> Result<Redirect, String> {
-    eprintln!("\n╔══════════════════════════════════════════════════════════════╗");
-    eprintln!("║           PROBLEM GENERATION REQUEST RECEIVED                ║");
-    eprintln!("╚══════════════════════════════════════════════════════════════╝");
+pub async fn post_generate_problem(
+    State(pool): State<DbPool>,
+    headers: HeaderMap,
+) -> Result<Redirect, (StatusCode, String)> {
+    let admin_token = std::env::var("ADMIN_TOKEN").unwrap_or_default();
+    let provided = headers
+        .get("x-admin-token")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    if admin_token.is_empty() || provided != admin_token {
+        return Err((StatusCode::UNAUTHORIZED, "Unauthorized".to_string()));
+    }
 
     let ai = AiService::new();
     let sandbox = SandBox::new();
 
-    eprintln!("\n📝 AI Service initialized");
-    eprintln!("🔧 Sandbox initialized");
-
     let mut problem = None;
-    let max_attempts = 3;
-
-    for attempt in 0..max_attempts {
-        eprintln!("\n┌────────────────────────────────────────────────────────────┐");
-        eprintln!("│ ATTEMPT {}/{}                                              │", attempt + 1, max_attempts);
-        eprintln!("└────────────────────────────────────────────────────────────┘");
-
-        eprintln!("🤖 Requesting AI to generate problem (language: rust, difficulty: medium)...");
-
+    for attempt in 0..3 {
         match ai.generate_problem("rust", "medium").await {
             Ok(p) => {
-                eprintln!("✓ AI generated problem successfully");
-                eprintln!("  Title: {}", p.name);
-                eprintln!("  Tests count: {}", p.tests.len());
-                eprintln!("  Time limit: {} seconds", p.time_limit_seconds);
-                eprintln!("  Correct version length: {} chars", p.correct_version.len());
-                eprintln!("  Incorrect version length: {} chars", p.incorrect_version.len());
-
-                eprintln!("\n🔍 Validating problem...");
-                match validate_problem(&sandbox, &p, "rust").await {
-                    Ok(()) => {
-                        eprintln!("✅ Problem VALID!");
-                        problem = Some(p);
-                        break;
-                    }
-                    Err(e) => {
-                        eprintln!("❌ Validation FAILED: {}", e);
-                        eprintln!("   This problem will be discarded, retrying...");
-
-                        // Log more details about the problem that failed
-                        eprintln!("\n📋 Failed problem details:");
-                        eprintln!("   Title: {}", p.name);
-                        for (i, test) in p.tests.iter().enumerate() {
-                            eprintln!("   Test {}: input={:?} expected={:?}",
-                                      i, test.input, test.expected_output);
-                        }
-                    }
+                if validate_problem(&sandbox, &p, "rust").await.is_ok() {
+                    problem = Some(p);
+                    break;
                 }
             }
-            Err(e) => {
-                eprintln!("❌ AI generation FAILED: {}", e);
-                eprintln!("   Error type: {}", std::any::type_name_of_val(&e));
-
-                // Try to get more error context if possible
-                if e.to_string().contains("timeout") {
-                    eprintln!("   ⏰ This appears to be a timeout error");
-                } else if e.to_string().contains("api") || e.to_string().contains("key") {
-                    eprintln!("   🔑 This appears to be an API key or authentication error");
-                } else if e.to_string().contains("network") {
-                    eprintln!("   🌐 This appears to be a network connectivity error");
-                }
-            }
-        }
-
-        if attempt < max_attempts - 1 {
-            eprintln!("\n⏳ Waiting 1 second before next attempt...");
-            tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+            Err(e) => tracing::warn!("AI attempt {} failed: {}", attempt, e),
         }
     }
-
-    eprintln!("\n┌────────────────────────────────────────────────────────────┐");
-    eprintln!("│ FINAL RESULT                                             │");
-    eprintln!("└────────────────────────────────────────────────────────────┘");
 
     let problem = match problem {
-        Some(p) => {
-            eprintln!("✅ Problem generated successfully after validation!");
-            eprintln!("   Title: {}", p.name);
-            p
-        }
-        None => {
-            eprintln!("❌ FAILED to generate a valid problem after {} attempts", max_attempts);
-            eprintln!("\n🔧 TROUBLESHOOTING SUGGESTIONS:");
-            eprintln!("   1. Check if AI service API key is properly configured");
-            eprintln!("   2. Verify that the AI service endpoint is reachable");
-            eprintln!("   3. Check if the AI model is returning valid code");
-            eprintln!("   4. Verify sandbox execution environment is working");
-            eprintln!("   5. Check if the AI is generating both correct and incorrect versions");
-            eprintln!("   6. Verify test cases have proper input/output pairs");
-
-            eprintln!("\n💡 To test individual components:");
-            eprintln!("   - Test AI generation alone: cargo test test_ai_generation");
-            eprintln!("   - Test sandbox alone: cargo test test_sandbox");
-            eprintln!("   - Test validation alone with mock problem");
-
-            return Err("Failed to generate valid problem after 3 attempts".to_string());
-        }
+        Some(p) => p,
+        None => return Err((StatusCode::INTERNAL_SERVER_ERROR, "Failed to generate valid problem".to_string())),
     };
 
-    eprintln!("\n💾 Saving problem to database...");
-    match db::create_problem(&pool, &problem, "rust", Difficulty::Medium).await {
-        Ok(_) => {
-            eprintln!("✅ Problem saved to database successfully!");
-            eprintln!("\n╔══════════════════════════════════════════════════════════════╗");
-            eprintln!("║           PROBLEM GENERATION COMPLETE ✅                      ║");
-            eprintln!("╚══════════════════════════════════════════════════════════════╝\n");
-            Ok(Redirect::to("/problems"))
-        }
-        Err(e) => {
-            eprintln!("❌ Failed to save problem to database: {}", e);
-            Err(e.to_string())
-        }
-    }
+    db::create_problem(&pool, &problem, "rust", Difficulty::Medium)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(Redirect::to("/problems"))
 }
 
 async fn complete_login(
@@ -636,6 +561,9 @@ async fn complete_login(
         .map_err(|e| e.to_string())?;
     session.insert(SESSION_USER_ID, user_id.to_string()).await
         .map_err(|e| e.to_string())?;
+
+    merge_guest_progress(pool, session, user_id).await;
+
     Ok(())
 }
 
