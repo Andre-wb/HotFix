@@ -1,18 +1,87 @@
 {% extends "base.html" %}
 
-{% block title %}Sign up{% endblock %}
+{% block title %}Sign Up — HotFix{% endblock %}
 
 {% block main %}
-{% if let Some(message) = flash_message %}
-<div>{{ message }}</div>
-{% endif %}
+<div class="form-container">
+    <div class="form-card">
+        <div class="form-header">
+            <h1 class="form-title">Create Account</h1>
+            <p class="form-subtitle">Join the debugging community</p>
+        </div>
 
-<form action="/register" method="post">
-    <input type="text" name="username" placeholder="Username" value="{{ username.as_deref().unwrap_or("") }}" required><br>
-    <input type="email" name="email" placeholder="Email" value="{{ email.as_deref().unwrap_or("") }}" required><br>
-    <input type="password" name="password" placeholder="Password" value="{{ password.as_deref().unwrap_or("") }}" required><br>
-    <input type="password" name="confirm_password" placeholder="Confirm password" value="{{ confirm_password.as_deref().unwrap_or("") }}" required><br>
-    <button type="submit">Sign up</button>
-</form>
-<p>Already have an account? <a href="/login">Login here</a></p>
+        {% if let Some(message) = flash_message %}
+        <div class="flash-message flash-error">
+            <span>⚠️</span>
+            <span>{{ message }}</span>
+        </div>
+        {% endif %}
+
+        <form action="/register" method="post">
+            <div class="form-group">
+                <label class="form-label" for="username">Username</label>
+                <input
+                        type="text"
+                        id="username"
+                        name="username"
+                        class="form-input"
+                        placeholder="Choose a username"
+                        value="{{ username.as_deref().unwrap_or("") }}"
+                required
+                autofocus
+                minlength="3"
+                >
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="email">Email</label>
+                <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        class="form-input"
+                        placeholder="your@email.com"
+                        value="{{ email.as_deref().unwrap_or("") }}"
+                required
+                >
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">Password</label>
+                <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        class="form-input"
+                        placeholder="Create a strong password"
+                        value="{{ password.as_deref().unwrap_or("") }}"
+                required
+                minlength="8"
+                >
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="confirm_password">Confirm Password</label>
+                <input
+                        type="password"
+                        id="confirm_password"
+                        name="confirm_password"
+                        class="form-input"
+                        placeholder="Repeat your password"
+                        value="{{ confirm_password.as_deref().unwrap_or("") }}"
+                required
+                >
+            </div>
+
+            <button type="submit" class="btn">
+                <span>Create Account</span>
+                <span>→</span>
+            </button>
+        </form>
+
+        <div class="form-footer">
+            <p>Already have an account? <a href="/login">Sign in</a></p>
+        </div>
+    </div>
+</div>
 {% endblock %}

@@ -15,8 +15,9 @@ fn hash_code(code: &str) -> String {
 }
 
 pub fn generate_code() -> String {
-    let mut rng = rand::rng();
-    format!("{:06}", rng.random_range(0..1_000_000))
+    use rand::Rng;
+    let mut rng = thread_rng();
+    format!("{:06}", rng.gen_range(0..1_000_000))
 }
 
 pub async fn create_verification_code(

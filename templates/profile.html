@@ -1,51 +1,125 @@
 {% extends "base.html" %}
 
-{% block title %}Profile{% endblock %}
+{% block title %}Profile — {{ user.username }}{% endblock %}
 
 {% block main %}
-<div class="container">
-    <div class="card">
-        <h1>Profile</h1>
-        <hr>
-
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-value">{{ user.problems_solved }}</div>
-                <div class="stat-label">Problems Solved</div>
+<div class="container" style="max-width: 1000px;">
+    <div class="profile-hero">
+        <div class="profile-avatar">
+            {{ user.username.chars().next().unwrap_or('U')|upper }}
+        </div>
+        <div class="profile-info">
+            <h1 class="profile-name">{{ user.username }}</h1>
+            <div class="profile-badges">
+                <span class="badge" style="background: var(--accent-light); color: var(--accent);">
+                    {{ user.rank|title }}
+                </span>
+                {% if user.email_verified %}
+                <span class="badge" style="background: var(--success-bg); color: var(--success);">
+                    ✓ Verified
+                </span>
+                {% else %}
+                <span class="badge" style="background: var(--error-bg); color: var(--error);">
+                    ⚠ Not Verified
+                </span>
+                {% endif %}
             </div>
-            <div class="stat-card">
-                <div class="stat-value">{{ user.rank }}</div>
-                <div class="stat-label">Rank</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value">{{ user.created_at.format("%Y-%m-%d") }}</div>
-                <div class="stat-label">Member Since</div>
+            <div class="profile-meta">
+                <span>📅 Joined {{ user.created_at.format("%B %d, %Y") }}</span>
+                <span>🕒 Last login: {% if user.last_login_at.is_some() %}{{ user.last_login_at.unwrap().format("%Y-%m-%d") }}{% else %}Never{% endif %}</span>
             </div>
         </div>
+    </div>
 
-        <div class="form-group">
-            <label>Username</label>
-            <input type="text" value="{{ user.username }}" disabled>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">✅</div>
+            <div class="stat-value">{{ stats.total_solved }}</div>
+            <div class="stat-label">Problems Solved</div>
         </div>
+        <div class="stat-card">
+            <div class="stat-icon">📊</div>
+            <div class="stat-value">{{ stats.topics.len() }}</div>
+            <div class="stat-label">Topics Mastered</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">🏆</div>
+            <div class="stat-value">{{ user.rank|title }}</div>
+            <div class="stat-label">Current Rank</div>
+        </div>
+    </div>
 
-        <div class="form-group">
-            <label>Email</label>
-            <input type="email" value="{{ user.email }}" disabled>
-            {% if !user.email_verified %}
-            <small style="color: #e74c3c;">⚠️ Email not verified</small>
+    <div class="profile-grid">
+        <div class="card">
+            <h2 class="card-title" style="font-size: 1.25rem;">📚 Topic Mastery</h2>
+
+            {% if stats.topics.is_empty() %}
+            <div class="empty-state">
+                <div class="empty-state-icon">📭</div>
+                <p>No topics solved yet. Start solving problems!</p>
+            </div>
             {% else %}
-            <small style="color: #27ae60;">✓ Email verified</small>
+            <div class="topics-list">
+                {% for topic in stats.topics %}
+                <div class="topic-item">
+                    <div class="topic-name">{{ topic.0 }}</div>
+                    <div class="topic-bar-bg">
+                        <div class="topic-bar-fill" style="width: {% if topic.1 > 10 %}100{% else %}{{ topic.1 * 10 }}{% endif %}%;"></div>
+                    </div>
+                    <div class="topic-count">{{ topic.1 }} solved</div>
+                </div>
+                {% endfor %}
+            </div>
             {% endif %}
         </div>
 
-        <div class="form-group">
-            <label>Last Login</label>
-            <input type="text" value="{% if user.last_login_at.is_some() %}{{ user.last_login_at.unwrap().format("%Y-%m-%d %H:%M:%S") }}{% else %}Never{% endif %}" disabled>
-        </div>
+        <div class="card">
+            <h2 class="card-title" style="font-size: 1.25rem;">👤 Account Information</h2>
 
-        <div class="mt-2">
-            <a href="/problems" class="btn">Browse Problems</a>
+            <div class="info-row">
+                <span class="info-label">Username</span>
+                <span class="info-value">{{ user.username }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Email</span>
+                <span class="info-value">{{ user.email }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Email Status</span>
+                <span class="info-value">
+                    {% if user.email_verified %}
+                    <span style="color: var(--success);">✓ Verified</span>
+                    {% else %}
+                    <span style="color: var(--error);">✗ Not verified</span>
+                    {% endif %}
+                </span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Member Since</span>
+                <span class="info-value">{{ user.created_at.format("%B %d, %Y") }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Last Active</span>
+                <span class="info-value">
+                    {% if user.last_login_at.is_some() %}
+                        {{ user.last_login_at.unwrap().format("%B %d, %Y") }}
+                    {% else %}
+                        Never
+                    {% endif %}
+                </span>
+            </div>
         </div>
+    </div>
+
+    <div class="text-center" style="display: flex; gap: var(--space-md); justify-content: center;">
+        <a href="/problems" class="btn" style="width: auto;">
+            <span>📋</span>
+            <span>Browse Problems</span>
+        </a>
+        <a href="/logout" class="btn btn-secondary" style="width: auto;">
+            <span>🚪</span>
+            <span>Sign Out</span>
+        </a>
     </div>
 </div>
 {% endblock %}

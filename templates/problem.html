@@ -1,30 +1,93 @@
 {% extends "base.html" %}
 
-{% block title %}{{ problem.name }}{% endblock %}
+{% block title %}{{ problem.name }} — HotFix{% endblock %}
+
+{% block extra_head %}
+<style>
+    .problem-layout {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: var(--space-xl);
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-xl);
+    }
+
+    @media (max-width: 1024px) {
+        .problem-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
 
 {% block main %}
-<div class="container">
-    <div class="card">
-        <h1>{{ problem.name }}</h1>
+<div class="problem-layout">
+    <div class="problem-sidebar">
+        <div class="card">
+            <h1 class="card-title">{{ problem.name }}</h1>
 
-        <div class="meta">
-            <span class="difficulty">{{ problem.difficulty }}</span>
-            <span class="lang">{{ problem.language }}</span>
-            <span class="timer">⏱️ Time limit: <span id="timer">{{ problem.time_limit_seconds }}</span>s</span>
+            <div class="problem-meta">
+                {% match problem.difficulty %}
+                {% when Difficulty::Easy %}
+                <span class="badge badge-easy">Easy</span>
+                {% when Difficulty::Medium %}
+                <span class="badge badge-medium">Medium</span>
+                {% when Difficulty::Hard %}
+                <span class="badge badge-hard">Hard</span>
+                {% endmatch %}
+
+                <span class="badge badge-lang">{{ problem.language }}</span>
+
+                <span class="timer-badge" id="timer">
+                <span>⏱️</span>
+                <span id="timer-value">{{ problem.time_limit_seconds }}s</span>
+                </span>
+            </div>
         </div>
 
-        <div class="description">
-            <h3>Description</h3>
+        <div class="problem-description">
+            <h3>📋 Description</h3>
             <p>{{ problem.description }}</p>
         </div>
+    </div>
 
+    <div>
         <form action="/problems/{{ problem.id }}/submit" method="post" id="solve-form">
             <input type="hidden" name="start_time" value="{{ start_time }}">
-            <label>Fix the code:</label>
-            <div class="code-editor">
-                <textarea name="code" rows="25" required>{{ problem.incorrect_version }}</textarea>
+
+            <div class="editor-container">
+                <div class="editor-header">
+                    <div class="editor-header-left">
+                        <span class="editor-dot dot-red"></span>
+                        <span class="editor-dot dot-yellow"></span>
+                        <span class="editor-dot dot-green"></span>
+                        <span class="editor-title">solution.{{ problem.language }}</span>
+                    </div>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">Ctrl+Enter to submit</span>
+                </div>
+
+                <div class="editor-wrapper">
+                    <div class="line-numbers" id="line-numbers">1</div>
+                    <textarea
+                            name="code"
+                            id="problem-code"
+                            class="code-textarea"
+                            required
+                            spellcheck="false"
+                    >{{ problem.incorrect_version|safe }}</textarea>
+                </div>
+
+                <div class="editor-footer">
+                    <span id="cursor-position">Ln 1, Col 1</span>
+                    <span>{{ problem.language }} | UTF-8</span>
+                </div>
             </div>
-            <button type="submit">🚀 Submit Solution</button>
+
+            <button type="submit" class="btn submit-btn" id="submit-btn">
+                <span>🚀</span>
+                <span>Submit Solution</span>
+            </button>
         </form>
     </div>
 </div>

@@ -1,4 +1,4 @@
-/// Database initialisation and utils
+/// Database initialization and utils
 
 use argon2::{
     password_hash::{
@@ -11,13 +11,12 @@ use argon2::{
     Argon2,
 };
 use sqlx::{PgPool, migrate::Migrator};
-use crate::schemas::{RegisterForm, User, Difficulty, Problem, GeneratedProblem};
+use crate::schemas::{RegisterForm, User, Difficulty, Problem, GeneratedProblem, UserStats};
 use uuid::Uuid;
-
+use std::collections::HashMap;
 
 pub type DbPool = PgPool;
 pub static MIGRATOR: Migrator = sqlx::migrate!();
-
 
 pub async fn create_problem(
     pool: &DbPool,
@@ -102,6 +101,69 @@ pub async fn increment_solved_count(pool: &DbPool, problem_id: Uuid) -> Result<(
         .execute(pool)
         .await?;
     Ok(())
+}
+
+pub async fn update_user_tags(
+    pool: &DbPool,
+    user_id: Uuid,
+    topics: &[String],
+) -> Result<(), sqlx::Error> {
+    // Get current tags
+    let current_tags: serde_json::Value = sqlx::query_scalar(
+        "SELECT tags FROM users WHERE id = $1"
+    )
+        .bind(user_id)
+        .fetch_one(pool)
+        .await?;
+
+    let mut tags_map: HashMap<String, i32> = if current_tags.is_null() {
+        HashMap::new()
+    } else {
+        serde_json::from_value(current_tags).unwrap_or_default()
+    };
+
+    // Update counts for each topic
+    for topic in topics {
+        *tags_map.entry(topic.clone()).or_insert(0) += 1;
+    }
+
+    let new_tags = serde_json::to_value(&tags_map).unwrap_or_default();
+
+    sqlx::query("UPDATE users SET tags = $1 WHERE id = $2")
+        .bind(new_tags)
+        .bind(user_id)
+        .execute(pool)
+        .await?;
+
+    Ok(())
+}
+
+pub async fn get_user_stats(pool: &DbPool, user_id: Uuid) -> Result<UserStats, sqlx::Error> {
+    let user = sqlx::query_as::<_, User>(
+        "SELECT id, username, email, password_hash, created_at, rank,
+         problems_solved, tags, last_login_at, email_verified
+         FROM users WHERE id = $1"
+    )
+        .bind(user_id)
+        .fetch_one(pool)
+        .await?;
+
+    let topics_map: HashMap<String, i32> = if user.tags.is_null() {
+        HashMap::new()
+    } else {
+        serde_json::from_value(user.tags).unwrap_or_default()
+    };
+
+    // Convert HashMap to Vec for template compatibility
+    let mut topics: Vec<(String, i32)> = topics_map.into_iter().collect();
+    topics.sort_by(|a, b| b.1.cmp(&a.1)); // Sort by count descending
+
+    Ok(UserStats {
+        total_solved: user.problems_solved,
+        topics,
+        rank: user.rank,
+        join_date: user.created_at,
+    })
 }
 
 /// Initialize database connection pool
@@ -246,4 +308,23 @@ pub async fn get_user_by_id(pool: &DbPool, user_id: Uuid) -> Result<Option<User>
         .await?;
 
     Ok(user)
+}
+
+pub async fn has_user_solved_problem(
+    pool: &DbPool,
+    user_id: Uuid,
+    problem_id: Uuid,
+) -> Result<bool, sqlx::Error> {
+    let result = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(
+            SELECT 1 FROM submissions
+            WHERE user_id = $1 AND problem_id = $2 AND status = 'accepted'
+        )"
+    )
+        .bind(user_id)
+        .bind(problem_id)
+        .fetch_one(pool)
+        .await?;
+
+    Ok(result)
 }

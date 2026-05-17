@@ -12,7 +12,7 @@ use chrono::Utc;
 use serde_json::{json, Value};
 use tower_sessions::Session;
 use uuid::Uuid;
-use crate::{email, User};
+use crate::{email};
 use crate::db::{self, verify_password, hash_password, DbPool};
 use crate::schemas::{
     LoginTemplate,
@@ -41,22 +41,43 @@ const SESSION_PENDING_TYPE: &str = "pending_2fa_type";
 const SESSION_USER_ID: &str = "user_id";
 const SESSION_SOLVED: &str = "solved_problems";
 
+async fn is_logged_in(session: &Session) -> bool {
+    session.get::<String>(SESSION_USER_ID)
+        .await
+        .ok()
+        .flatten()
+        .is_some()
+}
 
-pub async fn get_register(flash_message: Option<String>) -> Html<String> {
+pub async fn get_register(session: Session, flash_message: Option<String>) -> Html<String> {
+    let logged_in = is_logged_in(&session).await;
+
+    if logged_in {
+        return Html("<script>window.location.href='/problems'</script>".to_string());
+    }
+
     Html(RegisterTemplate {
         flash_message,
         username: None,
         email: None,
         password: None,
         confirm_password: None,
+        logged_in: false,
     }.render().unwrap())
 }
 
-pub async fn get_login(flash_message: Option<String>) -> Html<String> {
+pub async fn get_login(session: Session, flash_message: Option<String>) -> Html<String> {
+    let logged_in = is_logged_in(&session).await;
+
+    if logged_in {
+        return Html("<script>window.location.href='/problems'</script>".to_string());
+    }
+
     Html(LoginTemplate {
         flash_message,
         identifier: None,
         password: None,
+        logged_in: false,
     }.render().unwrap())
 }
 
@@ -79,7 +100,16 @@ pub async fn get_profile(
         _ => return Err(Redirect::to("/login")),
     };
 
-    Ok(Html(UserProfileTemplate { user }.render().unwrap()))
+    let stats = match db::get_user_stats(&pool, user_id).await {
+        Ok(stats) => stats,
+        Err(_) => return Err(Redirect::to("/problems")),
+    };
+
+    Ok(Html(UserProfileTemplate {
+        user,
+        stats,
+        logged_in: true,
+    }.render().unwrap()))
 }
 
 pub async fn logout(session: Session) -> Redirect {
@@ -87,12 +117,21 @@ pub async fn logout(session: Session) -> Redirect {
     Redirect::to("/login")
 }
 
-pub async fn get_problems(State(pool): State<DbPool>) -> Html<String> {
+pub async fn get_problems(
+    session: Session,
+    State(pool): State<DbPool>,
+) -> Html<String> {
     let problems = db::get_problems(&pool).await.unwrap_or_default();
-    Html(ProblemsTemplate { problems }.render().unwrap())
+    let logged_in = is_logged_in(&session).await;
+
+    Html(ProblemsTemplate {
+        problems,
+        logged_in,
+    }.render().unwrap())
 }
 
 pub async fn get_problem(
+    session: Session,
     State(pool): State<DbPool>,
     Path(id): Path<Uuid>,
 ) -> Result<Html<String>, Redirect> {
@@ -101,10 +140,13 @@ pub async fn get_problem(
         _ => return Err(Redirect::to("/problems")),
     };
 
+    let logged_in = is_logged_in(&session).await;
+
     Ok(Html(
         ProblemTemplate {
             problem,
             start_time: Utc::now().timestamp(),
+            logged_in,
         }
             .render()
             .unwrap(),
@@ -115,9 +157,13 @@ pub async fn get_2fa(session: Session) -> Result<Html<String>, Redirect> {
     if session.get::<String>(SESSION_PENDING_USER).await.ok().flatten().is_none() {
         return Err(Redirect::to("/login"));
     }
+
+    let logged_in = is_logged_in(&session).await;
+
     Ok(Html(TwoFaTemplate {
         flash_message: None,
         confirm_code: None,
+        logged_in,
     }.render().unwrap()))
 }
 
@@ -133,6 +179,7 @@ pub async fn post_register(
             email: Some(form.email.clone()),
             password: Some(form.password.clone()),
             confirm_password: Some(form.confirm_password.clone()),
+            logged_in: false,
         }.render().unwrap();
         return Err(Html(error_html));
     }
@@ -145,6 +192,7 @@ pub async fn post_register(
                 email: Some(form.email.clone()),
                 password: Some(form.password.clone()),
                 confirm_password: Some(form.confirm_password.clone()),
+                logged_in: false,
             }.render().unwrap();
             return Err(Html(error_html));
         }
@@ -156,6 +204,7 @@ pub async fn post_register(
                 email: Some(form.email.clone()),
                 password: Some(form.password.clone()),
                 confirm_password: Some(form.confirm_password.clone()),
+                logged_in: false,
             }.render().unwrap();
             return Err(Html(error_html));
         }
@@ -172,6 +221,7 @@ pub async fn post_register(
                 email: Some(form.email.clone()),
                 password: Some(form.password.clone()),
                 confirm_password: Some(form.confirm_password.clone()),
+                logged_in: false,
             }.render().unwrap();
             return Err(Html(error_html));
         }
@@ -187,6 +237,7 @@ pub async fn post_register(
                 email: Some(form.email.clone()),
                 password: Some(form.password.clone()),
                 confirm_password: Some(form.confirm_password.clone()),
+                logged_in: false,
             }.render().unwrap();
             return Err(Html(error_html));
         }
@@ -202,6 +253,7 @@ pub async fn post_register(
                 email: Some(form.email.clone()),
                 password: Some(form.password.clone()),
                 confirm_password: Some(form.confirm_password.clone()),
+                logged_in: false,
             }.render().unwrap();
             return Err(Html(error_html));
         }
@@ -233,6 +285,7 @@ pub async fn post_login(
                 flash_message: Some("Invalid username/email or password".to_string()),
                 identifier: Some(form.identifier.clone()),
                 password: Some(form.password.clone()),
+                logged_in: false,
             }.render().unwrap();
             return Err(Html(error_html));
         },
@@ -242,6 +295,7 @@ pub async fn post_login(
                 flash_message: Some("An error occurred. Please try again".to_string()),
                 identifier: Some(form.identifier.clone()),
                 password: Some(form.password.clone()),
+                logged_in: false,
             }.render().unwrap();
             return Err(Html(error_html));
         }
@@ -254,6 +308,7 @@ pub async fn post_login(
                 flash_message: Some("Invalid username/email or password".to_string()),
                 identifier: Some(form.identifier.clone()),
                 password: Some(form.password.clone()),
+                logged_in: false,
             }.render().unwrap();
             return Err(Html(error_html));
         }
@@ -263,6 +318,7 @@ pub async fn post_login(
                 flash_message: Some("An error occurred. Please try again.".to_string()),
                 identifier: Some(form.identifier.clone()),
                 password: Some(form.password.clone()),
+                logged_in: false,
             }.render().unwrap();
             return Err(Html(error_html));
         }
@@ -277,6 +333,7 @@ pub async fn post_login(
                     flash_message: Some("Error sending verification code. Please try again.".to_string()),
                     identifier: Some(form.identifier.clone()),
                     password: Some(form.password.clone()),
+                    logged_in: false,
                 }.render().unwrap();
                 return Err(Html(error_html));
             }
@@ -309,6 +366,7 @@ pub async fn post_login(
                     flash_message: Some("Failed to send verification email. Please try again".to_string()),
                     identifier: Some(form.identifier.clone()),
                     password: Some(form.password.clone()),
+                    logged_in: false,
                 }.render().unwrap();
                 return Err(Html(error_html));
             }
@@ -332,6 +390,7 @@ pub async fn post_login(
             let error_html = TwoFaTemplate {
                 flash_message: Some("Error while completing authentication. Please try again".to_string()),
                 confirm_code: None,
+                logged_in: false,
             }.render().unwrap();
             return Err(Html(error_html));
         }
@@ -351,6 +410,7 @@ pub async fn post_2fa(
             let error_html = TwoFaTemplate {
                 flash_message: Some("Your session expired. Please sign in again".to_string()),
                 confirm_code: Some(form.confirm_code.clone()),
+                logged_in: false,
             }.render().unwrap();
             return Err(Html(error_html));
         }
@@ -363,6 +423,7 @@ pub async fn post_2fa(
             let error_html = TwoFaTemplate {
                 flash_message: Some("Session error. Please sign in again".to_string()),
                 confirm_code: Some(form.confirm_code.clone()),
+                logged_in: false,
             }.render().unwrap();
             return Err(Html(error_html));
         }
@@ -381,6 +442,7 @@ pub async fn post_2fa(
                     let error_html = TwoFaTemplate {
                         flash_message: Some("Error while verifying code. Please try again".to_string()),
                         confirm_code: Some(form.confirm_code.clone()),
+                        logged_in: false,
                     }.render().unwrap();
                     return Err(Html(error_html));
                 }
@@ -391,6 +453,7 @@ pub async fn post_2fa(
                 let error_html = TwoFaTemplate {
                     flash_message: Some("Error completing authentication. Please try again".to_string()),
                     confirm_code: Some(form.confirm_code.clone()),
+                    logged_in: false,
                 }.render().unwrap();
                 return Err(Html(error_html));
             }
@@ -401,24 +464,28 @@ pub async fn post_2fa(
             Err(Html(TwoFaTemplate {
                 flash_message: Some("Incorrect code".to_string()),
                 confirm_code: Some(form.confirm_code.clone()),
+                logged_in: false,
             }.render().unwrap()))
         }
         Ok(CodeVerificationResult::Expired) => {
             Err(Html(TwoFaTemplate {
                 flash_message: Some("Code expired. Please go back and request a new one".to_string()),
                 confirm_code: Some(form.confirm_code.clone()),
+                logged_in: false,
             }.render().unwrap()))
         }
         Ok(CodeVerificationResult::TooManyAttempts) => {
             Err(Html(TwoFaTemplate {
                 flash_message: Some("Too many failed attempts. Please request a new code".to_string()),
                 confirm_code: Some(form.confirm_code.clone()),
+                logged_in: false,
             }.render().unwrap()))
         }
         Ok(CodeVerificationResult::AlreadyUsed) => {
             Err(Html(TwoFaTemplate {
                 flash_message: Some("Code already used".to_string()),
                 confirm_code: Some(form.confirm_code.clone()),
+                logged_in: false,
             }.render().unwrap()))
         }
         Err(error) => {
@@ -426,6 +493,7 @@ pub async fn post_2fa(
             Err(Html(TwoFaTemplate {
                 flash_message: Some("An error occurred".to_string()),
                 confirm_code: Some(form.confirm_code.clone()),
+                logged_in: false,
             }.render().unwrap()))
         }
     }
@@ -442,41 +510,26 @@ pub async fn post_submit(
         _ => return Err(Redirect::to("/problems")),
     };
 
-    // Check time limit
     let elapsed = Utc::now().timestamp() - form.start_time;
     if elapsed > problem.time_limit_seconds as i64 {
         return Ok(Html("Time limit exceeded".to_string()));
     }
 
-    let tests: Vec<TestCase> =
-        serde_json::from_value(problem.tests).unwrap_or_default();
-
-    println!("=== SUBMISSION DEBUG ===");
-    println!("Problem: {}", problem.name);
-    println!("User code:\n{}", form.code);
-    println!("Tests: {:?}", tests);
+    let tests: Vec<TestCase> = serde_json::from_value(problem.tests).unwrap_or_default();
 
     let sandbox = SandBox::new();
     let mut results = Vec::new();
     let mut passed = 0;
 
-    for (i, test) in tests.iter().enumerate() {
-        println!("\n--- Running test {} ---", i);
-        println!("Input: {:?}", test.input);
-        println!("Expected: {:?}", test.expected_output);
-
+    for test in &tests {
         match sandbox
             .run(&problem.language, &form.code, &test.input, problem.time_limit_seconds as u64)
             .await
         {
             Ok(output) => {
-                println!("Got output: {:?}", output);
                 let ok = output.trim() == test.expected_output.trim();
                 if ok {
                     passed += 1;
-                    println!("✓ Test passed");
-                } else {
-                    println!("✗ Test failed - output mismatch");
                 }
                 results.push(TestResult {
                     input: test.input.clone(),
@@ -486,7 +539,6 @@ pub async fn post_submit(
                 });
             }
             Err(e) => {
-                println!("✗ Error: {}", e);
                 results.push(TestResult {
                     input: test.input.clone(),
                     expected: test.expected_output.clone(),
@@ -500,44 +552,46 @@ pub async fn post_submit(
     let all_passed = passed == tests.len() as i32;
     let status = if all_passed { "accepted" } else { "wrong_answer" };
 
-    // Get user/session info
     let user_id = session
         .get::<String>(SESSION_USER_ID).await.ok().flatten()
         .and_then(|id| Uuid::parse_str(&id).ok());
 
     let session_id = session.id().map(|s| s.to_string()).unwrap_or_default();
 
-    // Save submission
+    if all_passed {
+        if let Some(uid) = user_id {
+            let already_solved = db::has_user_solved_problem(&pool, uid, problem_id).await.unwrap_or(false);
+
+            if !already_solved {
+                let _ = db::increment_solved_count(&pool, problem_id).await;
+                let _ = sqlx::query("UPDATE users SET problems_solved = problems_solved + 1 WHERE id = $1")
+                    .bind(uid)
+                    .execute(&pool)
+                    .await;
+
+                // Update user tags with problem topics
+                let _ = db::update_user_tags(&pool, uid, &problem.topics).await;
+            }
+        } else {
+            let solved: Vec<String> = session
+                .get(SESSION_SOLVED).await.ok().flatten()
+                .unwrap_or_default();
+
+            if !solved.contains(&problem_id.to_string()) {
+                let _ = db::increment_solved_count(&pool, problem_id).await;
+                let mut solved = solved;
+                solved.push(problem_id.to_string());
+                let _ = session.insert(SESSION_SOLVED, solved).await;
+            }
+        }
+    }
+
     let _ = db::save_submission(
         &pool, problem_id, user_id, &session_id,
         &form.code, passed, tests.len() as i32, status,
     ).await;
 
-    // Update stats
-    if all_passed {
-        let _ = db::increment_solved_count(&pool, problem_id).await;
-
-        // Track in session for guests
-        let mut solved: Vec<String> = session
-            .get(SESSION_SOLVED).await.ok().flatten()
-            .unwrap_or_default();
-
-        if !solved.contains(&problem_id.to_string()) {
-            solved.push(problem_id.to_string());
-            let _ = session.insert(SESSION_SOLVED, solved).await;
-        }
-
-        // Update user stats if logged in
-        if let Some(uid) = user_id {
-            // Add to user's solved count, update tags, etc.
-            let _ = sqlx::query(
-                "UPDATE users SET problems_solved = problems_solved + 1 WHERE id = $1"
-            )
-                .bind(uid)
-                .execute(&pool)
-                .await;
-        }
-    }
+    let logged_in = is_logged_in(&session).await;
 
     Ok(Html(
         ResultsTemplate {
@@ -545,13 +599,13 @@ pub async fn post_submit(
             total: tests.len() as i32,
             all_passed,
             results,
+            logged_in,
         }
             .render()
             .unwrap(),
     ))
 }
 
-// Admin endpoint to generate problems
 pub async fn post_generate_problem(
     State(pool): State<DbPool>,
     headers: HeaderMap,
@@ -616,7 +670,6 @@ async fn merge_guest_progress(pool: &DbPool, session: &Session, user_id: Uuid) {
 
     for problem_id_str in solved {
         if let Ok(pid) = Uuid::parse_str(&problem_id_str) {
-            // Update submissions to link to user
             let _ = sqlx::query(
                 "UPDATE submissions SET user_id = $1
                  WHERE session_id = $2 AND problem_id = $3 AND user_id IS NULL"

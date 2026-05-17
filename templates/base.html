@@ -4,26 +4,39 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}HotFix - Debugging Challenges{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
-    <style>
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
-            to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-        }
-    </style>
+    {% block extra_head %}{% endblock %}
 </head>
 <body>
 <header>
     <nav>
-        <a href="/problems" style="font-weight: bold; font-size: 1.2rem;">🔥 HotFix</a>
-        <a href="/problems">Problems</a>
-        <a href="/profile" style="margin-left: auto;">Profile</a>
-        <a href="/logout">Logout</a>
+        <a href="/problems" class="brand">
+            <span class="brand-icon">🔥</span>
+            <span>HotFix</span>
+        </a>
+
+        <div class="nav-links">
+            <a href="/problems" class="nav-link">Problems</a>
+
+            {% if logged_in %}
+            <a href="/profile" class="nav-link">Profile</a>
+            <a href="/logout" class="nav-link">Logout</a>
+            {% else %}
+            <a href="/login" class="nav-link">Sign In</a>
+            <a href="/register" class="nav-link">Sign Up</a>
+            {% endif %}
+        </div>
     </nav>
 </header>
 
-{% block main %}{% endblock %}
+<main>
+    {% block main %}{% endblock %}
+</main>
 
 <script src="/static/js/editor.js"></script>
+{% block extra_scripts %}{% endblock %}
 </body>
 </html>

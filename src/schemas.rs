@@ -23,6 +23,14 @@ pub struct User {
     pub email_verified: bool,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserStats {
+    pub total_solved: i32,
+    pub topics: Vec<(String, i32)>,
+    pub rank: String,
+    pub join_date: DateTime<Utc>,
+}
+
 #[derive(Debug, FromRow, Clone)]
 pub struct Problem {
     pub id: Uuid,
@@ -44,12 +52,14 @@ pub struct Problem {
 pub struct ProblemTemplate {
     pub problem: Problem,
     pub start_time: i64,
+    pub logged_in: bool,
 }
 
 #[derive(Template)]
 #[template(path = "problems.html")]
 pub struct ProblemsTemplate {
     pub problems: Vec<Problem>,
+    pub logged_in: bool,
 }
 
 #[derive(Deserialize)]
@@ -65,6 +75,7 @@ pub struct ResultsTemplate {
     pub total: i32,
     pub all_passed: bool,
     pub results: Vec<TestResult>,
+    pub logged_in: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -73,6 +84,17 @@ pub struct TestResult {
     pub expected: String,
     pub actual: String,
     pub passed: bool,
+}
+
+impl Default for TestResult {
+    fn default() -> Self {
+        Self {
+            input: String::new(),
+            expected: String::new(),
+            actual: String::new(),
+            passed: false,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, sqlx::Type, Serialize, Deserialize)]
@@ -165,6 +187,7 @@ pub struct TwoFaForm {
 pub struct TwoFaTemplate {
     pub flash_message: Option<String>,
     pub confirm_code: Option<String>,
+    pub logged_in: bool,
 }
 
 #[derive(Template)]
@@ -175,6 +198,7 @@ pub struct RegisterTemplate {
     pub email: Option<String>,
     pub password: Option<String>,
     pub confirm_password: Option<String>,
+    pub logged_in: bool,
 }
 
 #[derive(Template)]
@@ -183,12 +207,15 @@ pub struct LoginTemplate {
     pub flash_message: Option<String>,
     pub identifier: Option<String>,
     pub password: Option<String>,
+    pub logged_in: bool,
 }
 
 #[derive(Template)]
 #[template(path = "profile.html")]
 pub struct UserProfileTemplate {
     pub user: User,
+    pub stats: UserStats,
+    pub logged_in: bool,
 }
 
 #[derive(Deserialize, Debug)]

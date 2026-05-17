@@ -1,17 +1,54 @@
 {% extends "base.html" %}
-{% block title %}Results{% endblock %}
+
+
+{% block title %}Results — HotFix{% endblock %}
+
 {% block main %}
-<h1>{% if all_passed %}✅ Accepted!{% else %}❌ Wrong Answer{% endif %}</h1>
-<p>Passed {{ passed }} / {{ total }} tests</p>
+<div class="container" style="max-width: 800px;">
+    <div class="results-header">
+        <div class="results-status">
+            {% if all_passed %}🎉{% else %}😕{% endif %}
+        </div>
+        <h1 class="results-title {% if all_passed %}success{% else %}fail{% endif %}">
+            {% if all_passed %}All Tests Passed!{% else %}Some Tests Failed{% endif %}
+        </h1>
+        <p class="results-count">
+            Passed <strong style="color: var(--text-primary);">{{ passed }}</strong>
+            of <strong style="color: var(--text-primary);">{{ total }}</strong> tests
+        </p>
+    </div>
 
-{% for result in results %}
-<div class="test-case {% if result.passed %}pass{% else %}fail{% endif %}">
-    <h4>Test {{ loop.index }} {% if result.passed %}✓{% else %}✗{% endif %}</h4>
-    <pre>Input: {{ result.input }}</pre>
-    <pre>Expected: {{ result.expected }}</pre>
-    <pre>Got: {{ result.actual }}</pre>
+    {% for test_result in results %}
+    <div class="test-case {% if test_result.passed %}pass{% else %}fail{% endif %}">
+        <div class="test-case-header">
+            <span class="icon">{% if test_result.passed %}✅{% else %}❌{% endif %}</span>
+            <span>Test {{ loop.index }}</span>
+        </div>
+
+        <div class="test-data">
+            <span class="test-data-label">Input</span>
+            <div class="test-data-value">{{ test_result.input }}</div>
+        </div>
+
+        <div class="test-data">
+            <span class="test-data-label">Expected Output</span>
+            <div class="test-data-value">{{ test_result.expected }}</div>
+        </div>
+
+        <div class="test-data">
+            <span class="test-data-label">Your Output</span>
+            <div class="test-data-value {% if !test_result.passed %} error {% endif %}">
+                {{ test_result.actual }}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    <div class="text-center mt-2">
+        <a href="/problems" class="btn btn-secondary" style="width: auto; display: inline-flex;">
+            <span>←</span>
+            <span>Back to Problems</span>
+        </a>
+    </div>
 </div>
-{% endfor %}
-
-<a href="/problems">Back to problems</a>
 {% endblock %}

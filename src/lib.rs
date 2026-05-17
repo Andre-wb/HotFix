@@ -9,6 +9,7 @@ pub mod auth;
 pub mod ai;
 pub mod sandbox;
 pub mod problem_validation;
+pub mod middleware;
 
 pub use config::Config;
 pub use db::DbPool;
@@ -23,7 +24,7 @@ pub async fn create_router(pool: DbPool) -> axum::Router {
     use routes::{
         get_problems, get_problem, post_submit, post_generate_problem,
         get_profile, get_login, post_login,
-        get_register, post_register, get_2fa, post_2fa
+        get_register, post_register, get_2fa, post_2fa, logout,
     };
 
     Router::new()

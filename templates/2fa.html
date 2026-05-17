@@ -1,14 +1,46 @@
 {% extends "base.html" %}
 
-{% block title %}2FA Verification{% endblock %}
+{% block title %}Two-Factor Authentication — HotFix{% endblock %}
 
 {% block main %}
-{% if let Some(message) = flash_message %}
-<div>{{ message }}</div>
-{% endif %}
+<div class="form-container">
+    <div class="form-card">
+        <div class="form-header">
+            <h1 class="form-title">Two-Factor Auth</h1>
+            <p class="form-subtitle">Enter the verification code from your authenticator app</p>
+        </div>
 
-<form action="/2fa_confirm" method="post">
-    <input type="text" name="confirm_code" placeholder="Enter verification code" value='{{ confirm_code.as_deref().unwrap_or("") }}' required><br>
-    <button type="submit">Verify</button>
-</form>
+        {% if let Some(message) = flash_message %}
+        <div class="flash-message flash-error">
+            <span>⚠️</span>
+            <span>{{ message }}</span>
+        </div>
+        {% endif %}
+
+        <form action="/2fa_confirm" method="post">
+            <div class="form-group">
+                <label class="form-label" for="confirm_code">Verification Code</label>
+                <input
+                        type="text"
+                        id="confirm_code"
+                        name="confirm_code"
+                        class="form-input"
+                        placeholder="000000"
+                        value="{{ confirm_code.as_deref().unwrap_or("") }}"
+                required
+                autofocus
+                maxlength="6"
+                pattern="[0-9]*"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                >
+            </div>
+
+            <button type="submit" class="btn">
+                <span>Verify</span>
+                <span>🔐</span>
+            </button>
+        </form>
+    </div>
+</div>
 {% endblock %}
