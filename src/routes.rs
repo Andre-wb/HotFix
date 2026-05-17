@@ -5,9 +5,11 @@ use axum::{
     extract::{State, Path},
     Form,
     http::{HeaderMap, StatusCode},
+    Json
 };
 use askama::Template;
 use chrono::Utc;
+use serde_json::{json, Value};
 use tower_sessions::Session;
 use uuid::Uuid;
 use crate::email;
@@ -426,18 +428,33 @@ pub async fn post_submit(
     let tests: Vec<TestCase> =
         serde_json::from_value(problem.tests).unwrap_or_default();
 
+    println!("=== SUBMISSION DEBUG ===");
+    println!("Problem: {}", problem.name);
+    println!("User code:\n{}", form.code);
+    println!("Tests: {:?}", tests);
+
     let sandbox = SandBox::new();
     let mut results = Vec::new();
     let mut passed = 0;
 
-    for test in &tests {
+    for (i, test) in tests.iter().enumerate() {
+        println!("\n--- Running test {} ---", i);
+        println!("Input: {:?}", test.input);
+        println!("Expected: {:?}", test.expected_output);
+
         match sandbox
             .run(&problem.language, &form.code, &test.input, problem.time_limit_seconds as u64)
             .await
         {
             Ok(output) => {
+                println!("Got output: {:?}", output);
                 let ok = output.trim() == test.expected_output.trim();
-                if ok { passed += 1; }
+                if ok {
+                    passed += 1;
+                    println!("✓ Test passed");
+                } else {
+                    println!("✗ Test failed - output mismatch");
+                }
                 results.push(TestResult {
                     input: test.input.clone(),
                     expected: test.expected_output.clone(),
@@ -446,6 +463,7 @@ pub async fn post_submit(
                 });
             }
             Err(e) => {
+                println!("✗ Error: {}", e);
                 results.push(TestResult {
                     input: test.input.clone(),
                     expected: test.expected_output.clone(),
@@ -589,4 +607,37 @@ async fn merge_guest_progress(pool: &DbPool, session: &Session, user_id: Uuid) {
     }
 
     let _ = session.remove::<Vec<String>>("solved_problems").await;
+}
+
+pub async fn test_generate_problem(
+    headers: HeaderMap,
+) -> Result<Json<Value>, (StatusCode, String)> {
+    let admin_token = std::env::var("ADMIN_TOKEN").unwrap_or_default();
+    let provided = headers
+        .get("x-admin-token")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+
+    if admin_token.is_empty() || provided != admin_token {
+        return Err((StatusCode::UNAUTHORIZED, "Unauthorized".to_string()));
+    }
+
+    let ai = AiService::new();
+
+    for attempt in 0..3 {
+        match ai.generate_problem("rust", "easy").await {
+            Ok(problem) => {
+                return Ok(Json(json!({
+                    "success": true,
+                    "problem": problem,
+                    "attempt": attempt + 1
+                })));
+            }
+            Err(e) => {
+                tracing::warn!("Attempt {} failed: {}", attempt + 1, e);
+            }
+        }
+    }
+
+    Err((StatusCode::INTERNAL_SERVER_ERROR, "Failed to generate problem after 3 attempts".to_string()))
 }

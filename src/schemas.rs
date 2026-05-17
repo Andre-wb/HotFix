@@ -110,7 +110,7 @@ pub struct TestCase {
     pub expected_output: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct GeneratedProblem {
     pub name: String,
     pub topics: Vec<String>,

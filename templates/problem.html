@@ -15,7 +15,8 @@
 <form action="/problems/{{ problem.id }}/submit" method="post" id="solve-form">
     <input type="hidden" name="start_time" value="{{ start_time }}">
     <label>Fix the code:</label>
-    <textarea name="code" rows="25" cols="100" required>{{ problem.incorrect_version }}</textarea>
+    <textarea name="code" rows="25" cols="100" required style="font-family: monospace;">{{ problem.incorrect_version }}</textarea>
+    <br><br>
     <button type="submit">Submit Solution</button>
 </form>
 

@@ -1,10 +1,6 @@
-/// AI interact module
-
 use reqwest::Client;
 use serde_json::json;
-use crate::schemas::{AiService, GeneratedProblem, OllamaResponse, };
-
-
+use crate::schemas::{AiService, GeneratedProblem, OllamaResponse};
 
 impl AiService {
     pub fn new() -> Self {
@@ -23,35 +19,72 @@ impl AiService {
         let prompt = format!(
             r#"Create a {difficulty} debugging challenge in {language}.
 
-STRICT REQUIREMENTS:
-1. incorrect_version must contain realistic bugs (logic errors, off-by-one, missing edge cases)
-2. incorrect_version must NOT pass all tests
-3. correct_version must pass ALL tests
-4. Use stdin/stdout for input/output
-5. Include exactly 3 test cases
+IMPORTANT: The input format is:
+- First line: integer N (number of elements)
+- Second line: N space-separated integers
 
-Return ONLY valid JSON in this exact structure(for example):
+EXAMPLE OF CORRECT RUST CODE THAT READS SPACE-SEPARATED NUMBERS:
+```rust
+use std::io;
+use std::io::BufRead;
+
+fn main() {{
+    let stdin = io::stdin();
+    let mut lines = stdin.lock().lines();
+
+    // Read N
+    let n: usize = lines.next().unwrap().unwrap().trim().parse().unwrap();
+
+    // Read the line of numbers
+    let nums_line = lines.next().unwrap().unwrap();
+    let numbers: Vec<i32> = nums_line
+        .split_whitespace()
+        .map(|x| x.parse().unwrap())
+        .collect();
+
+    // Process numbers
+    let sum: i32 = numbers.iter().sum();
+    println!("{{}}", sum);
+}}
+STRICT RULES:
+
+correct_version MUST compile and run correctly
+incorrect_version MUST have bugs but still compile
+Use stdin/stdout for I/O
+Parse input correctly: first read N, then read the next line and split by whitespace
+Use proper parsing with error handling
+Return ONLY valid JSON (no markdown, no explanations):
+EXAMPLE JSON OUTPUT:
 {{
-  "name": "Short descriptive title",
-  "topics": ["arrays", "sorting"],
-  "description": "Detailed explanation of what the correct version of program should do",
-  "incorrect_version": "fn main() {{ ... }}",
-  "correct_version": "fn main() {{ ... }}",
-  "tests": [
-    {{"input": "3\n1 2 3", "expected_output": "6"}},
-    {{"input": "2\n5 5", "expected_output": "10"}},
-    {{"input": "1\n42", "expected_output": "42"}}
-  ],
-  "time_limit_seconds": 300
+"name": "Sum of Array",
+"topics": ["arrays", "loops"],
+"description": "Calculate the sum of N numbers",
+"correct_version": "use std::io;\nuse std::io::BufRead;\n\nfn main() {{\n let stdin = io::stdin();\n let mut lines = stdin.lock().lines();\n let n: usize = lines.next().unwrap().unwrap().trim().parse().unwrap();\n let nums_line = lines.next().unwrap().unwrap();\n let numbers: Vec<i32> = nums_line.split_whitespace().map(|x| x.parse().unwrap()).collect();\n let sum: i32 = numbers.iter().sum();\n println!("{{}}", sum);\n}}",
+"incorrect_version": "use std::io;\n\nfn main() {{\n let mut input = String::new();\n io::stdin().read_line(&mut input).unwrap();\n let n: i32 = input.trim().parse().unwrap();\n let mut sum = 0;\n for _ in 0..n {{\n let mut num = String::new();\n io::stdin().read_line(&mut num).unwrap();\n sum += num.trim().parse::<i32>().unwrap();\n }}\n println!("{{}}", sum);\n}}",
+"tests": [
+{{"input": "3\n1 2 3", "expected_output": "6"}},
+{{"input": "4\n10 20 30 40", "expected_output": "100"}}
+],
+"time_limit_seconds": 5
 }}"#);
 
+        let system_prompt = "You are a Rust programming expert. Generate ONLY valid JSON.
+The code MUST correctly parse space-separated numbers from stdin.
+Use BufRead to read lines and split_whitespace() for parsing.
+Never use markdown in JSON values.
+Ensure all code compiles with rustc.";
+
         let body = json!({
-            "model": self.model,
-            "system": "You are an expert competitive programming coach. You generate debugging challenges. Always respond with valid JSON only. No markdown, no explanations outside JSON.",
-            "prompt": prompt,
-            "stream": false,
-            "format": "json"
-        });
+"model": self.model,
+"system": system_prompt,
+"prompt": prompt,
+"stream": false,
+"format": "json",
+"options": {
+"temperature": 0.1,
+"num_predict": 2048
+}
+});
 
         let res = self
             .client
@@ -59,13 +92,48 @@ Return ONLY valid JSON in this exact structure(for example):
             .json(&body)
             .send()
             .await
-            .map_err(|e| format!("Ollama connection failed: {}. Is Ollama running?", e))?;
+            .map_err(|e| format!("Ollama connection failed: {}", e))?;
 
-        let data: OllamaResponse = res.json().await.map_err(|e| e.to_string())?;
+        if !res.status().is_success() {
+            let error_text = res.text().await.unwrap_or_default();
+            return Err(format!("Ollama API error: {}", error_text));
+        }
 
-        let problem: GeneratedProblem = serde_json::from_str(&data.response)
-            .map_err(|e| format!("AI returned invalid JSON: {}. Raw: {}", e, data.response))?;
+        let data: OllamaResponse = res.json().await.map_err(|e| format!("Failed to parse response: {}", e))?;
+
+        // Clean up the response
+        let cleaned_response = data.response
+            .replace("json", "") .replace("rust", "")
+            .replace("```", "")
+            .trim()
+            .to_string();
+
+        let mut problem: GeneratedProblem = serde_json::from_str(&cleaned_response)
+            .map_err(|e| format!("AI returned invalid JSON: {}. Raw: {}", e, &cleaned_response[..cleaned_response.len().min(500)]))?;
+
+        // Fix common Rust issues
+        problem.correct_version = fix_rust_code(&problem.correct_version);
+        problem.incorrect_version = fix_rust_code(&problem.incorrect_version);
 
         Ok(problem)
     }
+}
+
+fn fix_rust_code(code: &str) -> String {
+    let mut fixed = code.to_string();
+
+    // Add missing imports
+    if fixed.contains("BufRead") && !fixed.contains("use std::io::BufRead;") {
+        if fixed.contains("use std::io;") {
+            fixed = fixed.replace("use std::io;", "use std::io;\nuse std::io::BufRead;");
+        } else {
+            fixed = fixed.replacen("fn main()", "use std::io;\nuse std::io::BufRead;\n\nfn main()", 1);
+        }
+    }
+
+    // Fix common parsing issues
+    fixed = fixed.replace(".read_line(&mut input);", ".read_line(&mut input).unwrap();");
+    fixed = fixed.replace("split_whitespace()", "split_whitespace()");
+
+    fixed
 }
