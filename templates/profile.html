@@ -3,5 +3,49 @@
 {% block title %}Profile{% endblock %}
 
 {% block main %}
-<h1>Profile</h1>
+<div class="container">
+    <div class="card">
+        <h1>Profile</h1>
+        <hr>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">{{ user.problems_solved }}</div>
+                <div class="stat-label">Problems Solved</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ user.rank }}</div>
+                <div class="stat-label">Rank</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ user.created_at.format("%Y-%m-%d") }}</div>
+                <div class="stat-label">Member Since</div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Username</label>
+            <input type="text" value="{{ user.username }}" disabled>
+        </div>
+
+        <div class="form-group">
+            <label>Email</label>
+            <input type="email" value="{{ user.email }}" disabled>
+            {% if !user.email_verified %}
+            <small style="color: #e74c3c;">⚠️ Email not verified</small>
+            {% else %}
+            <small style="color: #27ae60;">✓ Email verified</small>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label>Last Login</label>
+            <input type="text" value="{% if user.last_login_at.is_some() %}{{ user.last_login_at.unwrap().format("%Y-%m-%d %H:%M:%S") }}{% else %}Never{% endif %}" disabled>
+        </div>
+
+        <div class="mt-2">
+            <a href="/problems" class="btn">Browse Problems</a>
+        </div>
+    </div>
+</div>
 {% endblock %}

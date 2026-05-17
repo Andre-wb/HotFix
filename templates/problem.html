@@ -1,39 +1,35 @@
 {% extends "base.html" %}
+
 {% block title %}{{ problem.name }}{% endblock %}
+
 {% block main %}
-<h1>{{ problem.name }}</h1>
-<div class="meta">
-    <span class="difficulty">{{ problem.difficulty }}</span>
-    <span class="lang">{{ problem.language }}</span>
-    <span class="timer">Time limit: <span id="timer">{{ problem.time_limit_seconds }}</span>s</span>
-</div>
+<div class="container">
+    <div class="card">
+        <h1>{{ problem.name }}</h1>
 
-<div class="description">
-    <p>{{ problem.description }}</p>
-</div>
+        <div class="meta">
+            <span class="difficulty">{{ problem.difficulty }}</span>
+            <span class="lang">{{ problem.language }}</span>
+            <span class="timer">⏱️ Time limit: <span id="timer">{{ problem.time_limit_seconds }}</span>s</span>
+        </div>
 
-<form action="/problems/{{ problem.id }}/submit" method="post" id="solve-form">
-    <input type="hidden" name="start_time" value="{{ start_time }}">
-    <label>Fix the code:</label>
-    <textarea name="code" rows="25" cols="100" required style="font-family: monospace;">{{ problem.incorrect_version }}</textarea>
-    <br><br>
-    <button type="submit">Submit Solution</button>
-</form>
+        <div class="description">
+            <h3>Description</h3>
+            <p>{{ problem.description }}</p>
+        </div>
+
+        <form action="/problems/{{ problem.id }}/submit" method="post" id="solve-form">
+            <input type="hidden" name="start_time" value="{{ start_time }}">
+            <label>Fix the code:</label>
+            <div class="code-editor">
+                <textarea name="code" rows="25" required>{{ problem.incorrect_version }}</textarea>
+            </div>
+            <button type="submit">🚀 Submit Solution</button>
+        </form>
+    </div>
+</div>
 
 <script>
-    let timeLeft = {{ problem.time_limit_seconds }};
-    const timerEl = document.getElementById('timer');
-    const form = document.getElementById('solve-form');
-
-    const interval = setInterval(() => {
-        timeLeft--;
-        timerEl.textContent = timeLeft;
-        if (timeLeft <= 0) {
-            clearInterval(interval);
-            form.querySelector('button').disabled = true;
-            timerEl.textContent = "EXPIRED";
-            alert("Time's up!");
-        }
-    }, 1000);
+    window.problemTimeLimit = {{ problem.time_limit_seconds }};
 </script>
 {% endblock %}

@@ -12,12 +12,12 @@ use chrono::Utc;
 use serde_json::{json, Value};
 use tower_sessions::Session;
 use uuid::Uuid;
-use crate::email;
+use crate::{email, User};
 use crate::db::{self, verify_password, hash_password, DbPool};
 use crate::schemas::{
     LoginTemplate,
     ProblemsTemplate,
-    ProfileTemplate,
+    UserProfileTemplate,
     RegisterForm,
     RegisterTemplate,
     LoginForm,
@@ -60,8 +60,31 @@ pub async fn get_login(flash_message: Option<String>) -> Html<String> {
     }.render().unwrap())
 }
 
-pub async fn get_profile(_flash_message: Option<String>) -> Html<String> {
-    Html(ProfileTemplate.render().unwrap())
+pub async fn get_profile(
+    session: Session,
+    State(pool): State<DbPool>,
+) -> Result<Html<String>, Redirect> {
+    let user_id = match session.get::<String>(SESSION_USER_ID).await.ok().flatten() {
+        Some(id) => id,
+        None => return Err(Redirect::to("/login")),
+    };
+
+    let user_id = match Uuid::parse_str(&user_id) {
+        Ok(id) => id,
+        Err(_) => return Err(Redirect::to("/login")),
+    };
+
+    let user = match db::get_user_by_id(&pool, user_id).await {
+        Ok(Some(user)) => user,
+        _ => return Err(Redirect::to("/login")),
+    };
+
+    Ok(Html(UserProfileTemplate { user }.render().unwrap()))
+}
+
+pub async fn logout(session: Session) -> Redirect {
+    session.remove::<String>(SESSION_USER_ID).await.ok();
+    Redirect::to("/login")
 }
 
 pub async fn get_problems(State(pool): State<DbPool>) -> Html<String> {

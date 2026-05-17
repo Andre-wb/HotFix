@@ -2,18 +2,28 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>{% block title %}{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}HotFix - Debugging Challenges{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+            to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+    </style>
 </head>
 <body>
 <header>
     <nav>
-        <a href="/login">Sign in</a>
+        <a href="/problems" style="font-weight: bold; font-size: 1.2rem;">🔥 HotFix</a>
         <a href="/problems">Problems</a>
+        <a href="/profile" style="margin-left: auto;">Profile</a>
+        <a href="/logout">Logout</a>
     </nav>
 </header>
+
 {% block main %}{% endblock %}
+
+<script src="/static/js/editor.js"></script>
 </body>
 </html>

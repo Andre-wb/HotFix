@@ -8,7 +8,7 @@ use serde_json::Value;
 use sqlx::FromRow;
 use uuid::Uuid;
 
-#[derive(Debug, FromRow)]
+#[derive(Debug, FromRow, Clone)]
 #[allow(unused)]
 pub struct User {
     pub id: Uuid,
@@ -17,13 +17,13 @@ pub struct User {
     pub password_hash: String,
     pub created_at: DateTime<Utc>,
     pub rank: String,
-    pub problems_solved: i32, // for tracking how many problems user solved
-    pub tags: Value, // for tracking topics of problems which user solved and how many problems user solved in 1 exact topic
+    pub problems_solved: i32,
+    pub tags: Value,
     pub last_login_at: Option<DateTime<Utc>>,
     pub email_verified: bool,
 }
 
-#[derive(Debug, FromRow)]
+#[derive(Debug, FromRow, Clone)]
 pub struct Problem {
     pub id: Uuid,
     pub name: String,
@@ -187,7 +187,9 @@ pub struct LoginTemplate {
 
 #[derive(Template)]
 #[template(path = "profile.html")]
-pub struct ProfileTemplate;
+pub struct UserProfileTemplate {
+    pub user: User,
+}
 
 #[derive(Deserialize, Debug)]
 pub struct RegisterForm {

@@ -234,3 +234,16 @@ pub fn verify_password(password: &str, hash: &str) -> Result<bool, String> {
         .is_ok()
     )
 }
+
+pub async fn get_user_by_id(pool: &DbPool, user_id: Uuid) -> Result<Option<User>, sqlx::Error> {
+    let user = sqlx::query_as::<_, User>(
+        "SELECT id, username, email, password_hash, created_at, rank,
+         problems_solved, tags, last_login_at, email_verified
+         FROM users WHERE id = $1"
+    )
+        .bind(user_id)
+        .fetch_optional(pool)
+        .await?;
+
+    Ok(user)
+}
