@@ -33,6 +33,7 @@ pub async fn create_router(pool: DbPool) -> axum::Router {
         .route("/login", get(get_login))
         .route("/login", post(post_login))
         .route("/problems", get(get_problems))
+        .route("/", get(get_problems))
         .route("/problems/:id", get(get_problem))
         .route("/problems/:id/submit", post(post_submit))
         .route("/admin/generate", post(post_generate_problem))

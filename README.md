@@ -1,4 +1,5 @@
-# HotFix - Programming Debugging Challenge Platform
+# HotFix 
+## Programming Debugging Challenge Platform
 
 HotFix is a web-based platform where users can solve programming debugging challenges. It provides a sandboxed environment for running code, user authentication with 2FA via email, and an AI-powered problem generation system (currently under development).
 
@@ -7,7 +8,7 @@ HotFix is a web-based platform where users can solve programming debugging chall
 - **User Authentication**: Register/Login with email verification
 - **Two-Factor Authentication (2FA)**: Email-based verification codes
 - **Programming Challenges**: Solve Rust debugging problems
-- **Code Execution**: Secure sandboxed execution using Docker
+- **Safe Execution**: Secure sandboxed execution using Docker
 - **Progress Tracking**: Track solved problems and user statistics
 - **AI Problem Generation**: (WIP - coming soon)
 
@@ -27,51 +28,186 @@ git clone https://github.com/Andre-wb/HotFix
 cd hotfix
 ```
 
-### 2. Install Rust (if not installed)
+### 2. Install Rust
 
+**Linux / macOS:**
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source ~/.cargo/env
 ```
 
+**Windows:**
+Download and run from [https://rustup.rs](https://rustup.rs)
+
 ### 3. Install and Setup PostgreSQL
 
-**Ubuntu/Debian:**
+#### Linux (Ubuntu/Debian)
 ```bash
 sudo apt update
 sudo apt install postgresql postgresql-contrib
 sudo systemctl start postgresql
 ```
 
-**macOS:**
+#### macOS
 ```bash
 brew install postgresql
 brew services start postgresql
 ```
 
-**Create database:**
+#### Windows
+Download from [https://www.postgresql.org/download/windows/](https://www.postgresql.org/download/windows/)
+
+#### Create Database and User (All Platforms)
+
 ```bash
+# Linux/macOS
 sudo -u postgres psql
+
+# Windows (as Administrator)
+psql -U postgres
 ```
+
+Then run the following SQL commands:
 
 ```sql
 CREATE DATABASE hotfix;
 CREATE USER hotfix_user WITH PASSWORD 'your_password';
 GRANT ALL PRIVILEGES ON DATABASE hotfix TO hotfix_user;
+
+-- IMPORTANT: Grant schema privileges
+\c hotfix
+GRANT ALL ON SCHEMA public TO hotfix_user;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO hotfix_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO hotfix_user;
+
 \q
 ```
 
+> **⚠️ Note:** The `GRANT ALL ON SCHEMA public` command is **required** for the application to create and access tables properly.
+
 ### 4. Install Docker
 
-**Ubuntu/Debian:**
+#### Linux
 ```bash
 curl -fsSL https://get.docker.com | sh
 sudo usermod -aG docker $USER
 # Log out and back in, or run: newgrp docker
 ```
 
-**macOS:**
+#### macOS
 Download from [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+
+#### Windows
+Download from [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop/)
+
+> **Important:** you need to ensure that docker engine is running
+
+## Verify Docker is Running
+
+After installation, verify that Docker is properly installed and the engine is running:
+
+### macOS:
+
+- Open Docker Desktop application
+- Wait for the status to show "Engine running" (green indicator in menu bar)
+- Verify in terminal:
+
+```bash
+docker ps
+docker version
+```
+### Windows:
+
+- Option 1 (Docker Desktop): 
+Open Docker Desktop → wait for green indicator → "Engine running"
+- Option 2 (WSL2 only):
+
+```bash
+# In WSL2 terminal
+sudo service docker status
+sudo service docker start
+```
+### Verify in terminal (Command Prompt, PowerShell, or WSL2):
+
+```bash
+docker ps
+docker version
+```
+### Linux (native Docker Engine):
+
+Docker runs as a system service. Check status:
+- Should show "active (running)"
+```bash
+sudo systemctl status docker
+```
+
+
+### Start if not running:
+```bash
+sudo systemctl start docker
+```
+
+### Enable to start on boot:
+```bash
+sudo systemctl enable docker
+```
+Verify with:
+
+```bash
+docker ps
+docker version
+```
+Test Docker with Hello World (All Platforms)
+
+```bash
+docker run hello-world
+```
+You should see a welcome message confirming Docker is working correctly.
+
+## Common Docker Issues and Solutions
+
+- Docker permission denied (Linux):
+
+```bash
+sudo usermod -aG docker $USER
+# Log out and back in, OR run:
+newgrp docker
+```
+- Docker daemon not running (Linux):
+
+```bash
+sudo systemctl start docker
+sudo systemctl enable docker  # auto-start on boot
+```
+### Docker Desktop won't start (macOS/Windows):
+
+Ensure virtualization is enabled in BIOS
+Check system resources (minimum 4GB RAM, 64-bit CPU)
+Restart Docker Desktop
+Check logs: ~/.docker/desktop/log.log (macOS) or Windows Event Viewer
+Port conflicts with Docker (when running sandbox):
+
+```bash
+# Check if Docker daemon is using conflicting ports
+docker ps
+docker system df
+```
+WSL2 issues (Windows):
+
+```bash
+# In PowerShell (Administrator)
+wsl --update
+wsl --set-default-version 2
+# Restart Docker Desktop
+```
+
+### Quick Status Check
+Run this command to get a comprehensive Docker status:
+
+```bash
+docker info
+```
+If this command succeeds and shows system information (not "Cannot connect to daemon"), your Docker engine is running correctly and ready for the HotFix sandbox execution.
 
 ### 5. Configure Environment
 
@@ -161,34 +297,49 @@ Visit `http://127.0.0.1:8000/register` and create an account.
 ### 4. Track Progress
 
 - View your profile at `/profile` to see:
-    - Total problems solved
-    - Your rank
-    - Topic-based statistics
+  - Total problems solved
+  - Your rank
+  - Topic-based statistics
 
 ## Manual Database Setup (Alternative)
 
 If migrations don't run automatically, run these SQL files in order:
 
 ```bash
-# Connect to your database
+# Linux/macOS
 psql -U hotfix_user -d hotfix
 
-# Run migrations (in this order)
+# Windows
+psql -U hotfix_user -d hotfix
+```
+
+```sql
+-- Run in this order
 \i migrations/20260508112303_initial_schema.sql
 \i migrations/20270509120000_upgrade_problems.sql
 \i migrations/20270509120001_create_submissions.sql
 \i migrations/20270509120002_create_problems.sql
+
+-- Ensure schema permissions
+GRANT ALL ON SCHEMA public TO hotfix_user;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO hotfix_user;
 ```
 
-Or using psql directly:
+Or using command line:
 
+**Linux/macOS:**
 ```bash
 cat migrations/*.sql | psql -U hotfix_user -d hotfix
 ```
 
+**Windows (PowerShell):**
+```powershell
+Get-Content migrations/*.sql | psql -U hotfix_user -d hotfix
+```
+
 ## Troubleshooting
 
-### Docker permission denied
+### Docker permission denied (Linux)
 
 ```bash
 sudo usermod -aG docker $USER
@@ -197,10 +348,31 @@ sudo usermod -aG docker $USER
 
 ### Database connection failed
 
-Check PostgreSQL is running:
+**Linux:**
 ```bash
-sudo systemctl status postgresql  # Linux
-brew services list                 # macOS
+sudo systemctl status postgresql
+```
+
+**macOS:**
+```bash
+brew services list
+```
+
+**Windows:**
+Check Services menu or run as Administrator:
+```bash
+net start postgresql-x64-14
+```
+
+### Public schema permission denied
+
+If you see errors like `permission denied for schema public`, run:
+
+```sql
+\c hotfix
+GRANT ALL ON SCHEMA public TO hotfix_user;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO hotfix_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO hotfix_user;
 ```
 
 ### Port 8000 already in use
@@ -214,7 +386,10 @@ brew services list                 # macOS
 
 ```bash
 # Set environment variable
-export SQLX_OFFLINE=true
+export SQLX_OFFLINE=true  # Linux/macOS
+set SQLX_OFFLINE=true     # Windows Command Prompt
+$env:SQLX_OFFLINE=true    # Windows PowerShell
+
 cargo build
 ```
 
@@ -263,7 +438,7 @@ cargo test
 cargo build --release
 ```
 
-The binary will be at `target/release/hotfix`
+The binary will be at `target/release/hotfix` (or `target\release\hotfix.exe` on Windows)
 
 ## Environment Variables Reference
 
