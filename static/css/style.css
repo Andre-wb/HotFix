@@ -250,6 +250,10 @@ nav {
     font-weight: 600;
     margin-bottom: var(--space-lg);
     color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    gap: 10px;
 }
 
 /* ============================================
@@ -428,7 +432,7 @@ nav {
 }
 
 .btn {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     justify-content: center;
     gap: var(--space-sm);
@@ -464,6 +468,16 @@ nav {
 .btn:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-glow);
+}
+
+.btn span {
+    text-decoration: none;
+}
+
+a {
+    text-decoration: none;
+    display: flex;
+    align-items: center;
 }
 
 .btn:active {
@@ -863,9 +877,16 @@ nav {
 
 .profile-meta {
     display: flex;
+    align-items: center;
     gap: var(--space-lg);
     color: var(--text-secondary);
     font-size: 0.9rem;
+}
+
+.profile-meta-badge {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .stats-grid {
@@ -891,8 +912,7 @@ nav {
 }
 
 .stat-icon {
-    font-size: 2rem;
-    margin-bottom: var(--space-sm);
+    fill: var(--accent);
 }
 
 .stat-value {
