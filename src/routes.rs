@@ -557,20 +557,35 @@ pub async fn post_submit(
         .and_then(|id| Uuid::parse_str(&id).ok());
 
     let session_id = session.id().map(|s| s.to_string()).unwrap_or_default();
+    let _ = db::save_submission(
+        &pool, problem_id, user_id, &session_id,
+        &form.code, passed, tests.len() as i32, status,
+    ).await;
 
     if all_passed {
         if let Some(uid) = user_id {
-            let already_solved = db::has_user_solved_problem(&pool, uid, problem_id).await.unwrap_or(false);
+            let count: i64 = sqlx::query_scalar(
+                "SELECT COUNT(*) FROM submissions
+             WHERE user_id = $1 AND problem_id = $2 AND status = 'accepted'"
+            )
+                .bind(uid)
+                .bind(problem_id)
+                .fetch_one(&pool)
+                .await
+                .unwrap_or(0);
 
-            if !already_solved {
+            println!("User {} has {} accepted submissions for problem {}", uid, count, problem_id);
+
+            if count == 1 {
+                println!("First time solving! Incrementing counts...");
                 let _ = db::increment_solved_count(&pool, problem_id).await;
                 let _ = sqlx::query("UPDATE users SET problems_solved = problems_solved + 1 WHERE id = $1")
                     .bind(uid)
                     .execute(&pool)
                     .await;
-
-                // Update user tags with problem topics
                 let _ = db::update_user_tags(&pool, uid, &problem.topics).await;
+            } else {
+                println!("Already solved before! Skipping increment.");
             }
         } else {
             let solved: Vec<String> = session
@@ -585,11 +600,6 @@ pub async fn post_submit(
             }
         }
     }
-
-    let _ = db::save_submission(
-        &pool, problem_id, user_id, &session_id,
-        &form.code, passed, tests.len() as i32, status,
-    ).await;
 
     let logged_in = is_logged_in(&session).await;
 

@@ -315,16 +315,14 @@ pub async fn has_user_solved_problem(
     user_id: Uuid,
     problem_id: Uuid,
 ) -> Result<bool, sqlx::Error> {
-    let result = sqlx::query_scalar::<_, bool>(
-        "SELECT EXISTS(
-            SELECT 1 FROM submissions
-            WHERE user_id = $1 AND problem_id = $2 AND status = 'accepted'
-        )"
+    let result = sqlx::query_scalar::<_, i64>(
+        "SELECT COUNT(*) FROM submissions
+         WHERE user_id = $1 AND problem_id = $2 AND status = 'accepted'"
     )
         .bind(user_id)
         .bind(problem_id)
         .fetch_one(pool)
         .await?;
 
-    Ok(result)
+    Ok(result > 0)
 }
