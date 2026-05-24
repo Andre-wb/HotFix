@@ -2,11 +2,6 @@
 {% block title %}Problems — HotFix{% endblock %}
 {% block main %}
 <div class="container">
-    <div class="page-header">
-        <h1 class="page-title">Programming Challenges</h1>
-        <p class="page-subtitle">Fix the bugs, pass the tests, climb the leaderboard</p>
-    </div>
-
     <div class="card" style="padding: 0; overflow: hidden;">
         <table class="data-table">
             <thead>
@@ -39,16 +34,16 @@
                     {% endmatch %}
                 </td>
                 <td>
-                    <div style="display: flex; flex-wrap: wrap;">
+                    <div class="badges">
                         {% for topic in problem.topics %}
                         <span class="badge badge-topic">{{ topic }}</span>
                         {% endfor %}
                     </div>
                 </td>
-                <td style="text-align: center; font-family: var(--font-mono);">
+                <td style="text-align: center;">
                     {{ problem.solved_count }}
                 </td>
-                <td style="text-align: right; font-family: var(--font-mono); color: var(--text-muted);">
+                <td style="text-align: right; color: var(--text-muted);">
                     {{ problem.time_limit_seconds }}s
                 </td>
             </tr>

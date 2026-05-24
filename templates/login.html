@@ -12,47 +12,45 @@
 
         {% if let Some(message) = flash_message %}
         <div class="flash-message flash-error">
-            <span>⚠️</span>
+            <span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" style="fill: var(--accent);transform: ;msFilter:;"><path d="M12.884 2.532c-.346-.654-1.422-.654-1.768 0l-9 17A.999.999 0 0 0 3 21h18a.998.998 0 0 0 .883-1.467L12.884 2.532zM13 18h-2v-2h2v2zm-2-4V9h2l.001 5H11z"></path></svg>️</span>
             <span>{{ message }}</span>
         </div>
         {% endif %}
 
         <form action="/login" method="post">
             <div class="form-group">
-                <label class="form-label" for="identifier">Username or Email</label>
                 <input
                         type="text"
                         id="identifier"
                         name="identifier"
                         class="form-input"
-                        placeholder="Enter your username or email"
-                        value="{{ identifier.as_deref().unwrap_or("") }}"
+                        placeholder="username or email"
+                        value='{{ identifier.as_deref().unwrap_or("") }}'
                 required
                 autofocus
                 >
             </div>
 
             <div class="form-group">
-                <label class="form-label" for="password">Password</label>
                 <input
                         type="password"
                         id="password"
                         name="password"
                         class="form-input"
-                        placeholder="Enter your password"
-                        value="{{ password.as_deref().unwrap_or("") }}"
+                        placeholder="password"
+                        value='{{ password.as_deref().unwrap_or("") }}'
                 required
                 >
             </div>
 
             <button type="submit" class="btn">
                 <span>Sign In</span>
-                <span>→</span>
             </button>
         </form>
 
         <div class="form-footer">
-            <p>Don't have an account? <a href="/register">Create one</a></p>
+            <p>Don't have an account?</p>
+            <a href="/register">Create one</a>
         </div>
     </div>
 </div>

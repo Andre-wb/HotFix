@@ -7,25 +7,24 @@
     <div class="form-card">
         <div class="form-header">
             <h1 class="form-title">Two-Factor Authentication</h1>
-            <p class="form-subtitle">Verification code has been sent to your email</p>
+            <p class="form-subtitle">Verification code has been sent to your email. Please, enter the code</p>
         </div>
 
         {% if let Some(message) = flash_message %}
         <div class="flash-message flash-error">
-            <span>⚠️</span>
+            <span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" style="fill: var(--accent);transform: ;msFilter:;"><path d="M12.884 2.532c-.346-.654-1.422-.654-1.768 0l-9 17A.999.999 0 0 0 3 21h18a.998.998 0 0 0 .883-1.467L12.884 2.532zM13 18h-2v-2h2v2zm-2-4V9h2l.001 5H11z"></path></svg>️</span>
             <span>{{ message }}</span>
         </div>
         {% endif %}
 
         <form action="/2fa_confirm" method="post">
             <div class="form-group">
-                <label class="form-label" for="confirm_code">Enter the code</label>
                 <input
                         type="text"
                         id="confirm_code"
                         name="confirm_code"
                         class="form-input"
-                        placeholder="000000"
+                        placeholder="123456"
                         value='{{ confirm_code.as_deref().unwrap_or("") }}'
                         required
                         autofocus
@@ -38,7 +37,6 @@
 
             <button type="submit" class="btn">
                 <span>Verify</span>
-                <span>🔐</span>
             </button>
         </form>
     </div>

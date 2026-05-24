@@ -3,22 +3,6 @@
 {% block title %}{{ problem.name }} — HotFix{% endblock %}
 
 {% block extra_head %}
-<style>
-    .problem-layout {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: var(--space-xl);
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: var(--space-xl);
-    }
-
-    @media (max-width: 1024px) {
-        .problem-layout {
-            grid-template-columns: 1fr;
-        }
-    }
-</style>
 {% endblock %}
 
 {% block main %}
@@ -85,7 +69,6 @@
             </div>
 
             <button type="submit" class="btn submit-btn" id="submit-btn">
-                <span>🚀</span>
                 <span>Submit Solution</span>
             </button>
         </form>
