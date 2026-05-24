@@ -556,43 +556,70 @@ pub async fn post_submit(
         .get::<String>(SESSION_USER_ID).await.ok().flatten()
         .and_then(|id| Uuid::parse_str(&id).ok());
 
+    println!("=== SUBMISSION DEBUG ===");
+    println!("User ID: {:?}", user_id);
+    println!("Problem ID: {}", problem_id);
+    println!("All passed: {}", all_passed);
+
+    let already_solved = if let Some(uid) = user_id {
+        match db::has_user_solved_problem(&pool, uid, problem_id).await {
+            Ok(solved) => {
+                println!("Already solved before this submission: {}", solved);
+                solved
+            }
+            Err(e) => {
+                println!("Error checking solved status: {}", e);
+                false
+            }
+        }
+    } else {
+        println!("Guest user (not logged in)");
+        false
+    };
+
     let session_id = session.id().map(|s| s.to_string()).unwrap_or_default();
-    let _ = db::save_submission(
+    match db::save_submission(
         &pool, problem_id, user_id, &session_id,
         &form.code, passed, tests.len() as i32, status,
-    ).await;
+    ).await {
+        Ok(_) => println!("Submission saved successfully"),
+        Err(e) => println!("Error saving submission: {}", e),
+    }
 
     if all_passed {
         if let Some(uid) = user_id {
-            let count: i64 = sqlx::query_scalar(
-                "SELECT COUNT(*) FROM submissions
-             WHERE user_id = $1 AND problem_id = $2 AND status = 'accepted'"
-            )
-                .bind(uid)
-                .bind(problem_id)
-                .fetch_one(&pool)
-                .await
-                .unwrap_or(0);
+            if !already_solved {
+                println!("✅ FIRST TIME SOLVING! Updating counters...");
 
-            println!("User {} has {} accepted submissions for problem {}", uid, count, problem_id);
+                match db::increment_solved_count(&pool, problem_id).await {
+                    Ok(_) => println!("Problem solved_count incremented"),
+                    Err(e) => println!("Error incrementing problem count: {}", e),
+                }
 
-            if count == 1 {
-                println!("First time solving! Incrementing counts...");
-                let _ = db::increment_solved_count(&pool, problem_id).await;
-                let _ = sqlx::query("UPDATE users SET problems_solved = problems_solved + 1 WHERE id = $1")
+                match sqlx::query("UPDATE users SET problems_solved = problems_solved + 1 WHERE id = $1")
                     .bind(uid)
                     .execute(&pool)
-                    .await;
-                let _ = db::update_user_tags(&pool, uid, &problem.topics).await;
+                    .await
+                {
+                    Ok(_) => println!("User problems_solved incremented"),
+                    Err(e) => println!("Error updating user count: {}", e),
+                }
+
+                match db::update_user_tags(&pool, uid, &problem.topics).await {
+                    Ok(_) => println!("User tags updated"),
+                    Err(e) => println!("Error updating tags: {}", e),
+                }
             } else {
-                println!("Already solved before! Skipping increment.");
+                println!("⚠️ Already solved before! Skipping increment.");
             }
         } else {
+            println!("Guest user solution - using session tracking");
             let solved: Vec<String> = session
                 .get(SESSION_SOLVED).await.ok().flatten()
                 .unwrap_or_default();
 
             if !solved.contains(&problem_id.to_string()) {
+                println!("First time for guest! Updating problem count");
                 let _ = db::increment_solved_count(&pool, problem_id).await;
                 let mut solved = solved;
                 solved.push(problem_id.to_string());

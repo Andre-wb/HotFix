@@ -80,7 +80,7 @@ pub async fn save_submission(
 ) -> Result<(), sqlx::Error> {
     sqlx::query(
         "INSERT INTO submissions (id, problem_id, user_id, session_id, code, passed_tests, total_tests, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8::submission_status)"
     )
         .bind(Uuid::new_v4())
         .bind(problem_id)
