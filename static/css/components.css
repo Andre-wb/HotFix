@@ -81,8 +81,8 @@
 }
 
 .badge-medium {
-    background: rgba(245, 158, 11, 0.15);
-    color: var(--warning);
+    background: var(--meduim-secondary);
+    color: var(--meduim);
 }
 
 .badge-hard {

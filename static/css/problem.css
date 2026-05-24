@@ -37,12 +37,17 @@
     padding: var(--space-xl);
     line-height: 1.7;
     color: var(--text-secondary);
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
 }
 
 .problem-description h3 {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     color: var(--text-primary);
-    margin-bottom: var(--space-md);
-    font-size: 1.1rem;
+    gap: 5px;
 }
 
 .problem-description p {
@@ -54,8 +59,9 @@
 }
 
 .timer-badge {
-    display: inline-flex;
+    display: flex;
     align-items: center;
+    justify-content: center;
     gap: var(--space-sm);
     background: var(--bg-secondary);
     padding: var(--space-sm) var(--space-md);
@@ -66,9 +72,15 @@
     border: 1px solid var(--border);
 }
 
+.timer-badge span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .timer-badge.warning {
-    color: var(--error);
-    border-color: var(--error);
+    color: var(--accent);
+    border-color: var(--accent);
     animation: pulse 1s infinite;
 }
 

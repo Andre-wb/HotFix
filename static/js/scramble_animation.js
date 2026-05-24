@@ -16,8 +16,6 @@ function scrambleTo(el, targetText, duration = 500, onDone) {
 
     el._isScrambling = false;
 
-    // Фиксируем ширину только если элемент не имеет фиксированной ширины от CSS
-    // и не является блочным элементом на всю ширину
     const computedStyle = window.getComputedStyle(el);
     const isFullWidth = computedStyle.display === 'flex' && computedStyle.width === '100%';
 
@@ -36,9 +34,9 @@ function scrambleTo(el, targetText, duration = 500, onDone) {
         const finalWidth = tempSpan.offsetWidth;
         document.body.removeChild(tempSpan);
 
-        if (finalWidth > 0 && finalWidth < 500) { // Не фиксируем для огромных элементов
+        if (finalWidth > 0 && finalWidth < 500) {
             el.style.minWidth = finalWidth + 'px';
-            el.style.display = 'inline-flex'; // Для кнопок с flex
+            el.style.display = 'inline-flex';
             el.setAttribute('data-width-fixed', 'true');
         }
     }
@@ -111,7 +109,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Обработка кликов для немедленного перехода
     document.querySelectorAll('.nav-link, .btn').forEach(el => {
         el.addEventListener('click', () => {
             if (el._scrambleInterval) {
