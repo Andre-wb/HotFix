@@ -444,4 +444,12 @@ mod tests {
         assert!(rendered.contains("arrays"));
         assert!(rendered.contains("loops"));
     }
+
+    #[tokio::test]
+    async fn test_send_verification_code() {
+        use hotfix::email::send_verification_code;
+        let config = Config::global();
+        let email = config.smtp_from;
+        assert!(send_verification_code(email, "123456").await.is_ok());
+    }
 }

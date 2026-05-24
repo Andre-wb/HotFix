@@ -49,7 +49,7 @@ async fn is_logged_in(session: &Session) -> bool {
         .is_some()
 }
 
-pub async fn get_register(session: Session, flash_message: Option<String>) -> Html<String> {
+pub async fn get_register(session: Session) -> Html<String> {
     let logged_in = is_logged_in(&session).await;
 
     if logged_in {
@@ -57,7 +57,7 @@ pub async fn get_register(session: Session, flash_message: Option<String>) -> Ht
     }
 
     Html(RegisterTemplate {
-        flash_message,
+        flash_message: None,
         username: None,
         email: None,
         password: None,
@@ -66,7 +66,7 @@ pub async fn get_register(session: Session, flash_message: Option<String>) -> Ht
     }.render().unwrap())
 }
 
-pub async fn get_login(session: Session, flash_message: Option<String>) -> Html<String> {
+pub async fn get_login(session: Session) -> Html<String> {
     let logged_in = is_logged_in(&session).await;
 
     if logged_in {
@@ -74,7 +74,7 @@ pub async fn get_login(session: Session, flash_message: Option<String>) -> Html<
     }
 
     Html(LoginTemplate {
-        flash_message,
+        flash_message: None,
         identifier: None,
         password: None,
         logged_in: false,

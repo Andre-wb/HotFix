@@ -57,6 +57,8 @@ nav {
     border-radius: var(--radius-md);
     transition: var(--transition-fast);
     position: relative;
+    width: 110px;
+    text-align: center;
 }
 .nav-link, .btn {
     display: inline-block;

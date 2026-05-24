@@ -16,30 +16,6 @@ function scrambleTo(el, targetText, duration = 500, onDone) {
 
     el._isScrambling = false;
 
-    const computedStyle = window.getComputedStyle(el);
-    const isFullWidth = computedStyle.display === 'flex' && computedStyle.width === '100%';
-
-    if (!el.style.width && !el.getAttribute('data-width-fixed') && !isFullWidth) {
-        const tempSpan = document.createElement('span');
-        tempSpan.style.position = 'absolute';
-        tempSpan.style.visibility = 'hidden';
-        tempSpan.style.whiteSpace = 'nowrap';
-        tempSpan.style.font = computedStyle.font;
-        tempSpan.style.fontSize = computedStyle.fontSize;
-        tempSpan.style.fontFamily = computedStyle.fontFamily;
-        tempSpan.style.fontWeight = computedStyle.fontWeight;
-        tempSpan.style.letterSpacing = computedStyle.letterSpacing;
-        tempSpan.textContent = targetText;
-        document.body.appendChild(tempSpan);
-        const finalWidth = tempSpan.offsetWidth;
-        document.body.removeChild(tempSpan);
-
-        if (finalWidth > 0 && finalWidth < 500) {
-            el.style.minWidth = finalWidth + 'px';
-            el.style.display = 'inline-flex';
-            el.setAttribute('data-width-fixed', 'true');
-        }
-    }
 
     el._isScrambling = true;
 
