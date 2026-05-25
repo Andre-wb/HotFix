@@ -60,6 +60,11 @@
     font-weight: 600;
 }
 
+.test-case-header span {
+    display: grid;
+    place-items: center;
+}
+
 .test-case-header .icon {
     font-size: 1.2rem;
 }

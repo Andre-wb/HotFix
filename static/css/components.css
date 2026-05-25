@@ -226,11 +226,13 @@ a {
 .btn-secondary {
     background: var(--bg-tertiary);
     color: var(--text-primary);
+    width: 220px;
 }
 
 .btn-secondary:hover {
     background: var(--bg-glass);
     box-shadow: none;
+    color: var(--accent);
 }
 
 .btn-outline {
