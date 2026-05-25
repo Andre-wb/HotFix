@@ -4,9 +4,7 @@
 
 use hotfix::{db, sandbox::SandBox};
 
-/// Функция для декодирования экранированных строк из БД
 fn unescape_code(code: &str) -> String {
-    // Заменяем экранированные последовательности на реальные символы
     code.replace("\\n", "\n")
         .replace("\\t", "\t")
         .replace("\\r", "\r")
