@@ -138,19 +138,18 @@
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0; }
 
 .problem-description-pre {
-    white-space: pre-wrap;     /* Сохраняет пробелы и переносит строки */
-    font-family: inherit;      /* Использует основной шрифт */
+    white-space: pre-wrap;
+    font-family: inherit;
     background: var(--bg-secondary);
     padding: 1rem;
     border-radius: 8px;
     margin: 0;
     font-size: 14px;
     line-height: 1.6;
-    tab-size: 4;               /* Размер табуляции */
+    tab-size: 4;
 }
 
-/* Если нужно сохранить ВСЕ пробелы (включая лишние в конце строки) */
 .problem-description-pre {
-    white-space: pre-wrap;     /* или pre-line если не нужны пробелы в начале строк */
-    word-break: break-word;    /* Перенос длинных слов */
+    white-space: pre-wrap;
+    word-break: break-word;
 }
