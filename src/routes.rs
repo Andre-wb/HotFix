@@ -12,7 +12,7 @@ use chrono::Utc;
 use serde_json::{json, Value};
 use tower_sessions::Session;
 use uuid::Uuid;
-use crate::{email};
+use crate::{email, IntroduceTemplate};
 use crate::db::{self, verify_password, hash_password, DbPool};
 use crate::schemas::{
     LoginTemplate,
@@ -78,6 +78,14 @@ pub async fn get_login(session: Session) -> Html<String> {
         identifier: None,
         password: None,
         logged_in: false,
+    }.render().unwrap())
+}
+
+pub async fn get_introduce(session: Session) -> Html<String> {
+    let logged_in = is_logged_in(&session).await;
+
+    Html(IntroduceTemplate {
+        logged_in
     }.render().unwrap())
 }
 

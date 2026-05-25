@@ -218,6 +218,12 @@ pub struct UserProfileTemplate {
     pub logged_in: bool,
 }
 
+#[derive(Template)]
+#[template(path = "introduce.html")]
+pub struct IntroduceTemplate {
+    pub logged_in: bool,
+}
+
 #[derive(Deserialize, Debug)]
 pub struct RegisterForm {
     pub username: String,

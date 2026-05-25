@@ -28,6 +28,7 @@ pub async fn create_router(pool: DbPool) -> axum::Router {
     };
 
     Router::new()
+        .route("/introduce", get(get_introduce))
         .route("/register", get(get_register))
         .route("/register", post(post_register))
         .route("/login", get(get_login))
