@@ -135,10 +135,15 @@ pub async fn get_problem(
     State(pool): State<DbPool>,
     Path(id): Path<Uuid>,
 ) -> Result<Html<String>, Redirect> {
-    let problem = match db::get_problem(&pool, id).await {
+    let mut problem = match db::get_problem(&pool, id).await {
         Ok(Some(p)) => p,
         _ => return Err(Redirect::to("/problems")),
     };
+
+    problem.description = problem.description
+        .replace("\\n", "\n")
+        .replace("\\r\\n", "\n")
+        .replace("\\r", "\n");
 
     let logged_in = is_logged_in(&session).await;
 
