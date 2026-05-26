@@ -75,10 +75,6 @@
         font-size: 0.85rem;
     }
 
-    .container {
-        padding: var(--space-md);
-    }
-
     .page-title {
         font-size: 1.75rem;
     }

@@ -46,7 +46,38 @@ nav {
     gap: var(--space-xs);
     margin-left: auto;
     align-items: center;
+    transition: 0.3s;
+    @media (max-width: 640px) {
+        position: absolute;
+        width: 100vw;
+        left: 0;
+        right: 0;
+        top: 0;
+        transform: translateY(150%);
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        background: var(--accent);
+        border-radius: 0 0 20px 20px;
+        z-index: 2;
+
+    }
 }
+ 
+@media (max-width: 640px) {
+    .nav-links a {
+        color: var(--bg-primary);
+    }
+    header {
+        z-index: 3;
+        box-shadow: var(--shadow-lg);
+    }
+}
+
+.nav-links.toggle {
+    transform: translateY(150%);
+}
+
 
 .nav-link {
     color: var(--text-secondary);
@@ -88,6 +119,9 @@ nav {
     margin: 0 auto;
     padding: var(--space-xl);
     animation: fadeIn 0.5s var(--transition-base);
+    @media (max-width: 1024px) {
+        padding: 0;
+    }
 }
 
 .page-header {

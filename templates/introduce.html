@@ -1,13 +1,97 @@
+<!-- introduce.html -->
 {% extends "base.html" %}
 
-{% block title %}HotFix{% endblock %}
+{% block title %}HotFix — Debug. Fix. Level Up.{% endblock %}
 
 {% block main %}
 <section class="intro-hero">
-    <div class="intro-title">
+    <div class="intro-title glow-text" data-animate="fade-up">
         <h2>Wanna debug your code fast?</h2>
         <h1>Learn and practice with <strong>HotFix</strong></h1>
-    </h1>
-    <img src="/static/img/problems_table.png" alt="problems image" class="problems-table" id="problems-table">
+        <p class="hero-tagline">Rust debugging challenges • Real sandbox • Battle-tested skills</p>
+        <div class="hero-actions">
+            <a href="/problems" class="btn btn-primary">Start Debugging</a>
+            <a href="/register" class="btn btn-outline">Create Account</a>
+        </div>
+    </div>
+    <div class="problems-table-wrapper" data-animate="fade-up" data-delay="200">
+        <img src="/static/img/problems_table.png" alt="problems overview" class="problems-table" id="problems-table">
+    </div>
 </section>
+
+<section class="features-section" data-animate="fade-in">
+    <div class="container">
+        <h2 class="section-title">What makes <span class="accent">HotFix</span> different?</h2>
+        <div class="features-grid">
+            <div class="feature-card" data-animate="fade-up">
+                <div class="feature-icon">{ }</div>
+                <h3>Real debugging</h3>
+                <p>No blank‑slate coding. Fix broken Rust functions and understand why they fail.</p>
+            </div>
+            <div class="feature-card" data-animate="fade-up" data-delay="100">
+                <div class="feature-icon">< ></div>
+                <h3>Safe sandbox</h3>
+                <p>Your code runs inside Docker — fast, isolated, and 100% secure.</p>
+            </div>
+            <div class="feature-card" data-animate="fade-up" data-delay="200">
+                <div class="feature-icon">[ ]</div>
+                <h3>Track progress</h3>
+                <p>Detailed stats, rank, and topic‑based insights. Level up step by step.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="how-it-works" data-animate="fade-in">
+    <div class="container">
+        <h2 class="section-title">How to <span class="accent">HotFix</span> like a pro</h2>
+        <div class="steps">
+            <div class="step" data-animate="slide-up">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>Sign up & verify</h3>
+                    <p>Create an account and confirm your email (or use dev mode to skip SMTP).</p>
+                </div>
+            </div>
+            <div class="step" data-animate="slide-up" data-delay="150">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>Pick a problem</h3>
+                    <p>From easy arrays to hard primes — choose your level and language (Rust).</p>
+                </div>
+            </div>
+            <div class="step" data-animate="slide-up" data-delay="300">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>Debug & submit</h3>
+                    <p>Write your fix in the editor, run against hidden test cases, and get instant feedback.</p>
+                </div>
+            </div>
+            <div class="step" data-animate="slide-up" data-delay="450">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h3>Climb the leaderboard</h3>
+                    <p>Earn points, unlock topics, and become a debugging master.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="cta-section" data-animate="scale-in">
+    <div class="container">
+        <div class="cta-card">
+            <h2>Ready to fix broken code?</h2>
+            <p>Join hundreds of developers who sharpen their debugging skills with HotFix.</p>
+            <div class="cta-buttons">
+                <a href="/register" class="btn btn-primary">Get started — it's free</a>
+                <a href="/problems" class="btn btn-outline">Browse challenges</a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/scroll-animate.js"></script>
 {% endblock %}
