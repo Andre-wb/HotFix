@@ -6,6 +6,7 @@
     <title>{% block title %}HotFix - Debugging Challenges{% endblock %}</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <script src="/static/js/scramble_animation.js"></script>
+    <script src="/static/js/menu.js"></script>
     {% block extra_head %}{% endblock %}
 </head>
 <body>
@@ -15,7 +16,7 @@
             <span>HotFix</span>
         </a>
 
-        <div class="nav-links">
+        <div class="nav-links" id="nav-links">
             <a href="/problems" class="nav-link">Problems</a>
 
             {% if logged_in %}
@@ -26,6 +27,12 @@
             <a href="/register" class="nav-link">Sign Up</a>
             {% endif %}
         </div>
+
+        <button class="menu" type="button" id="menu">
+            <span class="line" id="line-1"></span>
+            <span class="line" id="line-2"></span>
+            <span class="line" id="line-3"></span>
+        </button>
     </nav>
 </header>
 

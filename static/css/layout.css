@@ -19,6 +19,7 @@ nav {
     display: flex;
     align-items: center;
     gap: var(--space-lg);
+    z-index: 3;
 }
 
 .brand {
@@ -52,15 +53,14 @@ nav {
         width: 100vw;
         left: 0;
         right: 0;
-        top: 0;
-        transform: translateY(150%);
+        transform: translateY(-150%);
         display: flex;
         align-items: center;
         justify-content: space-around;
         background: var(--accent);
         border-radius: 0 0 20px 20px;
         z-index: 2;
-
+        opacity: 0;
     }
 }
  
@@ -74,9 +74,13 @@ nav {
     }
 }
 
-.nav-links.toggle {
-    transform: translateY(150%);
+@media (max-width: 640px) {
+    .nav-links.active {
+        transform: translateY(150%);
+        opacity: 1;
+    }
 }
+
 
 
 .nav-link {
