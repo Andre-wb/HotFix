@@ -643,6 +643,8 @@ pub async fn post_submit(
 
     let logged_in = is_logged_in(&session).await;
 
+    let problem_link = format!("/problems/{}", problem_id);
+
     Ok(Html(
         ResultsTemplate {
             passed,
@@ -650,6 +652,7 @@ pub async fn post_submit(
             all_passed,
             results,
             logged_in,
+            problem_link
         }
             .render()
             .unwrap(),

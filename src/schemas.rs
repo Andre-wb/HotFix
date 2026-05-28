@@ -76,6 +76,7 @@ pub struct ResultsTemplate {
     pub all_passed: bool,
     pub results: Vec<TestResult>,
     pub logged_in: bool,
+    pub problem_link: String,
 }
 
 #[derive(Debug, Clone)]
