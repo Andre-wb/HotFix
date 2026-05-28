@@ -136,9 +136,6 @@
 .problem-description-pre {
     white-space: pre-wrap;
     font-family: inherit;
-    background: var(--bg-secondary);
-    padding: 1rem;
-    border-radius: 8px;
     margin: 0;
     font-size: 14px;
     line-height: 1.6;

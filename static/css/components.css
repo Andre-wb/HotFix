@@ -200,7 +200,6 @@
     flex-shrink: 0;
 }
 
-/* Для кнопок внутри форм (например, login/register/2fa) */
 form .btn {
     width: 100%;
     min-width: unset;
