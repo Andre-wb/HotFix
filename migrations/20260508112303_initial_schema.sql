@@ -1,16 +1,3 @@
-CREATE TABLE IF NOT EXISTS users (
-                                     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    username VARCHAR(50) NOT NULL UNIQUE,
-    email VARCHAR(100) NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    rank VARCHAR(20) NOT NULL DEFAULT 'beginner',
-    problems_solved INTEGER NOT NULL DEFAULT 0,
-    tags JSONB NOT NULL DEFAULT '{}'::jsonb,
-    email_verified BOOLEAN NOT NULL DEFAULT FALSE,
-    last_login_at TIMESTAMPTZ
-    );
-
 CREATE TABLE IF NOT EXISTS problems (
                                         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(100) NOT NULL,
@@ -30,6 +17,25 @@ CREATE TYPE difficulty_enum AS ENUM ('easy', 'medium', 'hard');
 EXCEPTION
     WHEN duplicate_object THEN NULL;
 END $$;
+
+DO $$ BEGIN
+CREATE TYPE rank_enum AS ENUM ('junior', 'middle', 'senior');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
+
+CREATE TABLE IF NOT EXISTS users (
+                                     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    rank rank_enum NOT NULL DEFAULT 'junior',
+    problems_solved INTEGER NOT NULL DEFAULT 0,
+    tags JSONB NOT NULL DEFAULT '{}'::jsonb,
+    email_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    last_login_at TIMESTAMPTZ
+    );
 
 CREATE TABLE IF NOT EXISTS email_verification_codes (
                                                         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

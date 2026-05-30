@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::FromRow;
 use uuid::Uuid;
+use crate::Rank::{Junior, Middle, Senior};
 
 #[derive(Debug, FromRow, Clone)]
 #[allow(unused)]
@@ -16,7 +17,7 @@ pub struct User {
     pub email: String,
     pub password_hash: String,
     pub created_at: DateTime<Utc>,
-    pub rank: String,
+    pub rank: Rank,
     pub problems_solved: i32,
     pub tags: Value,
     pub last_login_at: Option<DateTime<Utc>>,
@@ -27,7 +28,7 @@ pub struct User {
 pub struct UserStats {
     pub total_solved: i32,
     pub topics: Vec<(String, i32)>,
-    pub rank: String,
+    pub rank: Rank,
     pub join_date: DateTime<Utc>,
 }
 
@@ -112,6 +113,35 @@ impl std::fmt::Display for Difficulty {
             Difficulty::Easy => write!(f, "easy"),
             Difficulty::Medium => write!(f, "medium"),
             Difficulty::Hard => write!(f, "hard"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, sqlx::Type, Serialize, Deserialize)]
+#[sqlx(type_name="rank_enum", rename_all = "lowercase")]
+pub enum Rank {
+    Junior,
+    Middle,
+    Senior,
+}
+
+impl std::fmt::Display for Rank {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Junior => write!(f, "junior"),
+            Middle => write!(f, "middle"),
+            Senior => write!(f, "senior"),
+        }
+    }
+}
+
+impl Rank {
+    pub fn convert(problem_solved: i32) -> Self {
+        match problem_solved {
+            0..10  => Junior,
+            10..20 => Middle,
+            20..25 => Senior,
+            _ => unreachable!(),
         }
     }
 }

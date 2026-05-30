@@ -14,6 +14,7 @@ use sqlx::{PgPool, migrate::Migrator};
 use crate::schemas::{RegisterForm, User, Difficulty, Problem, GeneratedProblem, UserStats};
 use uuid::Uuid;
 use std::collections::HashMap;
+use crate::Rank;
 
 pub type DbPool = PgPool;
 pub static MIGRATOR: Migrator = sqlx::migrate!();
@@ -156,12 +157,14 @@ pub async fn get_user_stats(pool: &DbPool, user_id: Uuid) -> Result<UserStats, s
 
     // Convert HashMap to Vec for template compatibility
     let mut topics: Vec<(String, i32)> = topics_map.into_iter().collect();
-    topics.sort_by(|a, b| b.1.cmp(&a.1)); // Sort by count descending
+    topics.sort_by(|a, b| b.1.cmp(&a.1));
+    
+    let rank = Rank::convert(user.problems_solved);
 
     Ok(UserStats {
         total_solved: user.problems_solved,
         topics,
-        rank: user.rank,
+        rank,
         join_date: user.created_at,
     })
 }
@@ -208,7 +211,7 @@ pub async fn create_user(
 ) -> Result<User, sqlx::Error> {
     let query = "
         INSERT INTO users (username, email, password_hash, created_at, rank, problems_solved, tags, email_verified)
-        VALUES ($1, $2, $3, NOW(), 'beginner', 0, '{}'::jsonb, FALSE)
+        VALUES ($1, $2, $3, NOW(), 'junior', 0, '{}'::jsonb, FALSE)
         RETURNING id, username, email, password_hash, created_at, rank, problems_solved, tags, last_login_at, email_verified
     ";
 
