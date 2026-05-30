@@ -110,6 +110,7 @@
 .form-container {
     max-width: 420px;
     margin: var(--space-2xl) auto;
+    padding: var(--space-lg);
 }
 
 .form-card {

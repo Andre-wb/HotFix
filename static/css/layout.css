@@ -19,7 +19,8 @@ nav {
     display: flex;
     align-items: center;
     gap: var(--space-lg);
-    z-index: 3;
+    z-index: 4;
+    position: relative;
 }
 
 .brand {
@@ -121,9 +122,6 @@ nav {
     margin: 0 auto;
     padding: var(--space-xl);
     animation: fadeIn 0.5s var(--transition-base);
-    @media (max-width: 1024px) {
-        padding: 0;
-    }
 }
 
 .page-header {
