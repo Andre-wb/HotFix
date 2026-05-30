@@ -10,6 +10,17 @@
     {% block extra_head %}{% endblock %}
 </head>
 <body>
+<div class="nav-links-mobile" id="nav-links-mobile">
+    <a href="/problems" class="nav-link">Problems</a>
+
+    {% if logged_in %}
+    <a href="/profile" class="nav-link">Profile</a>
+    <a href="/logout" class="nav-link">Logout</a>
+    {% else %}
+    <a href="/login" class="nav-link">Sign In</a>
+    <a href="/register" class="nav-link">Sign Up</a>
+    {% endif %}
+</div>
 <header>
     <nav>
         <a href="/" class="brand">

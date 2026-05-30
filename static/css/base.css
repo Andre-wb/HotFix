@@ -83,6 +83,10 @@ body {
     overflow-x: hidden;
 }
 
+header {
+    height: 73px;
+}
+
 @font-face {
     font-family: 'Audiowide';
     src: url('../fonts/Audiowide/Audiowide-Regular.ttf') format('truetype');

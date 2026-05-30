@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", function () {
     const menu_button = document.getElementById("menu");
-    const nav_links = document.getElementById("nav-links");
+    const nav_links = document.getElementById("nav-links-mobile");
 
     menu_button.addEventListener("click", function () {
         if (menu_button.classList.contains("active")) {

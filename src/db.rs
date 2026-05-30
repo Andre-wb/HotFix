@@ -158,9 +158,9 @@ pub async fn get_user_stats(pool: &DbPool, user_id: Uuid) -> Result<UserStats, s
     // Convert HashMap to Vec for template compatibility
     let mut topics: Vec<(String, i32)> = topics_map.into_iter().collect();
     topics.sort_by(|a, b| b.1.cmp(&a.1));
-    
-    let rank = Rank::convert(user.problems_solved);
 
+    let rank = Rank::convert(user.problems_solved);
+    println!("RANK: {}, PROBLEM_SOLVED: {}", rank, user.problems_solved);
     Ok(UserStats {
         total_solved: user.problems_solved,
         topics,

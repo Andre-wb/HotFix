@@ -126,7 +126,7 @@
 .editor-dot {
     width: 10px;
     height: 10px;
-    border-radius: var(--radius-full);
+    border-radius: 50%;
 }
 
 .dot-red { background: #ef4444; }
