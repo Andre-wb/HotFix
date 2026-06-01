@@ -138,7 +138,7 @@ pub async fn get_problems(
     }.render().unwrap())
 }
 
-pub async fn get_problem(
+pub async fn get_problem( 
     session: Session,
     State(pool): State<DbPool>,
     Path(id): Path<Uuid>,
