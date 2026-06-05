@@ -10,7 +10,6 @@ HotFix is a web-based platform where users can solve programming debugging chall
 - **Programming Challenges**: Solve Rust debugging problems
 - **Safe Execution**: Secure sandboxed execution using Docker
 - **Progress Tracking**: Track solved problems and user statistics
-- **AI Problem Generation**: (WIP - coming soon)
 
 ## Prerequisites
 
